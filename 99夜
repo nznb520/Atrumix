@@ -2,9 +2,9 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 local Confirmed = false
 
 WindUI:Popup({
-    Title = "大司马脚本付费版V2",
+    Title = "Atrumix",
     IconThemed = true,
-    Content = "欢迎尊贵的用户" .. game.Players.LocalPlayer.Name .. "使用大司马脚本 当前版本型号:V2",
+    Content = "欢迎尊贵的用户" .. game.Players.LocalPlayer.Name .. "使用Atrumix 当前版本型号:V2",
     Buttons = {
         {
             Title = "取消",
