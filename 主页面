@@ -1,6 +1,63 @@
 -- 只加载一次 WindUI，使用可靠的链接
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
+-- ====== 用户名检测系统 ======
+-- 【标记】这里可以添加/修改允许的用户名列表
+local allowedUsernames = {
+    "lingxiaoge6",  -- 主要用户名
+    -- 可以在这里添加更多用户名，例如：
+    -- "User2",
+    -- "Player3",
+}
+
+-- 用户名对应的职位配置
+local userPositions = {
+    ["lingxiaoge6"] = "副团长",  -- 指定用户名的职位
+    -- 可以在这里添加更多用户的职位配置，例如：
+    -- ["User2"] = "普通成员",
+    -- ["Player3"] = "管理员",
+}
+
+-- 获取当前用户名
+local currentUsername = game.Players.LocalPlayer.Name
+
+-- 检查用户名是否在允许列表中
+local function isUserAllowed()
+    for _, allowedName in ipairs(allowedUsernames) do
+        if currentUsername == allowedName then
+            return true
+        end
+    end
+    return false
+end
+
+-- 获取用户职位（如果未配置则返回默认职位）
+local function getUserPosition(username)
+    return userPositions[username] or "军团成员"  -- 默认职位
+end
+
+-- 如果不是军团成员，执行踢出操作
+if not isUserAllowed() then
+    -- 显示踢出通知
+    WindUI:Notify({
+        Title = "Atrumix - 访问被拒绝",
+        Content = "你不是军团成员\nYou're not a Legionnaire",
+        Duration = 5,
+        Position = "Center",
+        Icon = "ban",
+        Color = Color3.fromRGB(220, 20, 60) -- 红色
+    })
+    
+    -- 等待2秒后踢出
+    wait(2)
+    
+    -- 踢出服务器
+    game.Players.LocalPlayer:Kick("你不是军团成员 | You're not a Legionnaire")
+    return -- 停止执行后续脚本
+end
+
+-- ====== 正常脚本执行（只有通过用户名检测的用户才能到达这里）=====
+
 -- 创建高级通知函数
 function showAdvancedNotification(title, description, duration)
     -- 使用 WindUI 的通知系统
@@ -15,6 +72,31 @@ function showAdvancedNotification(title, description, duration)
         Color = Color3.fromRGB(80, 120, 200) -- 主题色
     })
 end
+
+-- 显示欢迎回家的通知（根据用户名显示不同职位）
+local userPosition = getUserPosition(currentUsername)
+
+-- 为特殊用户添加标记
+local specialMark = ""
+if currentUsername == "lingxiaoge6" then
+    specialMark = "⭐ "  -- 为 lingxiaoge6 添加星星标记
+end
+
+-- 显示欢迎通知
+WindUI:Notify({
+    Title = "欢迎回家",
+    Content = string.format("用户名: %s\n职位: %s%s", 
+        currentUsername, 
+        specialMark, 
+        userPosition
+    ),
+    Duration = 6,
+    Position = "BottomRight",
+    Icon = "user-check",
+    Color = Color3.fromRGB(50, 205, 50), -- 绿色表示成功
+    CloseAnimation = "FadeOut",
+    OpenAnimation = "FadeIn"
+})
 
 -- 先定义主UI创建函数
 function createAtrumixUI()
@@ -151,7 +233,7 @@ function createAtrumixUI()
     IfonTab:Button({
         Title = "XK脚本",
         Callback = function()
-            loadstring("\108\111\97\100\115\116\114\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\40\34\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\66\73\78\106\105\97\111\98\122\120\54\47\66\73\78\106\105\97\111\47\109\97\105\110\47\88\75\46\84\88\84\34\41\41\40\41\10")()
+            loadstring("\108\111\97\100\115\116\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\40\34\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\66\73\78\106\105\97\111\98\122\120\54\47\66\73\78\106\105\97\111\47\109\97\105\110\47\88\75\46\84\88\84\34\41\41\40\41\10")()
         end,
     })
     
@@ -170,10 +252,14 @@ function createAtrumixUI()
     InfoTab:Button({
         Title = "关于Atrumix",
         Callback = function()
+            -- 获取当前用户的职位
+            local currentPosition = getUserPosition(currentUsername)
+            
             -- 创建高级通知显示Atrumix信息
             showAdvancedNotification(
                 "关于 Atrumix",
-                "欢迎 " .. game.Players.LocalPlayer.Name .. " 使用Atrumix脚本\n\n" ..
+                "欢迎 " .. currentUsername .. " 使用Atrumix脚本\n\n" ..
+                "职位: " .. currentPosition .. "\n\n" ..
                 "作者：南烛\n\n" ..
                 "脚本由我一人制作，所以更新速度慢\n\n" ..
                 "仅限墨龙‖凌霄军团成员使用\n\n" ..
@@ -206,7 +292,9 @@ end
 WindUI:Popup({
     Title = "Atrumix 脚本确认",
     IconThemed = true,
-    Content = "欢迎 " .. game.Players.LocalPlayer.Name .. " 使用Atrumix脚本\n\n仅限墨龙‖凌霄军团成员使用",
+    Content = "欢迎 " .. game.Players.LocalPlayer.Name .. " 使用Atrumix脚本\n\n" ..
+             "职位: " .. getUserPosition(currentUsername) .. "\n\n" ..
+             "仅限墨龙‖凌霄军团成员使用",
     Buttons = {
         {
             Title = "取消",
