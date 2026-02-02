@@ -5,6 +5,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 -- 【标记】这里可以添加/修改允许的用户名列表
 local allowedUsernames = {
     "lingxiaoge6",  -- 主要用户名
+    "yggcxfchbj",
     -- 可以在这里添加更多用户名，例如：
     -- "User2",
     -- "Player3",
@@ -12,7 +13,8 @@ local allowedUsernames = {
 
 -- 用户名对应的职位配置
 local userPositions = {
-    ["lingxiaoge6"] = "副团长",  -- 指定用户名的职位
+    ["lingxiaoge6"] = "副团长", 
+    ["yggcxfchbj"] = "一分队队长",-- 指定用户名的职位
     -- 可以在这里添加更多用户的职位配置，例如：
     -- ["User2"] = "普通成员",
     -- ["Player3"] = "管理员",
