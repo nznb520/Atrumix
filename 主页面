@@ -1,5 +1,5 @@
 -- 只加载一次 WindUI，使用可靠的链接
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+local Loaded_Main_Lua = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 -- ====== 用户名检测系统 ======
 -- 【标记】这里可以添加/修改允许的用户名列表
@@ -8,6 +8,7 @@ local allowedUsernames = {
     "yggcxfchbj",
     "sjdjdnddkn",
     "1q2wqqqqqqqqw",
+    "nznb666520",
     -- 可以在这里添加更多用户名，例如：
     -- "User2",
     -- "Player3",
@@ -19,6 +20,7 @@ local userPositions = {
     ["yggcxfchbj"] = "1分队队长",
     ["sjdjdnddkn"] = "4分队队长",
     ["1q2wqqqqqqqqw"] = "军团客人",
+    ［"nznb666520"］ = "测试",
     -- 指定用户名的职位
     -- 可以在这里添加更多用户的职位配置，例如：
     -- ["User2"] = "普通成员",
@@ -46,7 +48,7 @@ end
 -- 如果不是军团成员，执行踢出操作
 if not isUserAllowed() then
     -- 显示踢出通知
-    WindUI:Notify({
+    Loaded_Main_Lua:Notify({
         Title = "Atrumix - 访问被拒绝",
         Content = "你不是军团成员\nYou're not a Legionnaire",
         Duration = 5,
@@ -68,7 +70,7 @@ end
 -- 创建高级通知函数
 function showAdvancedNotification(title, description, duration)
     -- 使用 WindUI 的通知系统
-    WindUI:Notify({
+    Loaded_Main_Lua:Notify({
         Title = title,
         Content = description,
         Duration = duration or 5, -- 默认5秒
@@ -90,7 +92,7 @@ if currentUsername == "lingxiaoge6" then
 end
 
 -- 显示欢迎通知
-WindUI:Notify({
+Loaded_Main_Lua:Notify({
     Title = "欢迎回家",
     Content = string.format("用户名: %s\n职位: %s%s", 
         currentUsername, 
@@ -105,12 +107,184 @@ WindUI:Notify({
     OpenAnimation = "FadeIn"
 })
 
--- 先定义主UI创建函数
+-- 复制到剪贴板函数
+local function copyToClipboard(text)
+    if setclipboard then
+        setclipboard(text)
+        Loaded_Main_Lua:Notify({
+            Title = "复制成功",
+            Content = "已复制到剪贴板: " .. text,
+            Duration = 3,
+            Icon = "copy",
+            Color = Color3.fromRGB(34, 197, 94)
+        })
+    else
+        Loaded_Main_Lua:Notify({
+            Title = "复制失败",
+            Content = "当前环境不支持剪贴板功能",
+            Duration = 3,
+            Icon = "x-circle",
+            Color = Color3.fromRGB(239, 68, 68)
+        })
+    end
+end
+
+-- ====== 创建右上角时间显示函数 ======
+local function createBeijingTimeDisplay()
+    -- 创建主屏幕Gui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "BeijingTimeDisplay"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Parent = game:GetService("CoreGui")
+    
+    -- 创建主框架
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "TimeFrame"
+    mainFrame.Size = UDim2.new(0, 200, 0, 60)  -- 小尺寸
+    -- 修改为右上角位置：X坐标为屏幕宽度减去框架宽度再减10像素的偏移
+    mainFrame.Position = UDim2.new(1, -210, 0, 10)  -- 右上角位置
+    mainFrame.AnchorPoint = Vector2.new(0, 0)  -- 左上角锚点
+    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    mainFrame.BackgroundTransparency = 0.3
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = false  -- 不可拖动
+    mainFrame.Selectable = false
+    mainFrame.Draggable = false
+    mainFrame.Parent = screenGui
+    
+    -- 添加圆角
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = mainFrame
+    
+    -- 添加边框
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(100, 100, 150)
+    stroke.Thickness = 2
+    stroke.Parent = mainFrame
+    
+    -- 创建标题标签
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "TitleLabel"
+    titleLabel.Size = UDim2.new(1, 0, 0, 20)
+    titleLabel.Position = UDim2.new(0, 0, 0, 5)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "北京时间"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 14
+    titleLabel.Font = Enum.Font.GothamSemibold
+    titleLabel.Parent = mainFrame
+    
+    -- 创建时间显示标签（使用彩色渐变）
+    local timeLabel = Instance.new("TextLabel")
+    timeLabel.Name = "TimeLabel"
+    timeLabel.Size = UDim2.new(1, 0, 0, 30)
+    timeLabel.Position = UDim2.new(0, 0, 0, 25)
+    timeLabel.BackgroundTransparency = 1
+    timeLabel.Text = "00:00:00"
+    timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    timeLabel.TextSize = 20
+    timeLabel.Font = Enum.Font.GothamBold
+    timeLabel.Parent = mainFrame
+    
+    -- 创建渐变效果函数
+    local function updateGradient()
+        local hue = tick() % 10 / 10  -- 每10秒一个循环
+        local r, g, b
+        
+        -- 彩虹渐变算法
+        if hue < 1/6 then
+            r = 1
+            g = hue * 6
+            b = 0
+        elseif hue < 2/6 then
+            r = (2/6 - hue) * 6
+            g = 1
+            b = 0
+        elseif hue < 3/6 then
+            r = 0
+            g = 1
+            b = (hue - 2/6) * 6
+        elseif hue < 4/6 then
+            r = 0
+            g = (4/6 - hue) * 6
+            b = 1
+        elseif hue < 5/6 then
+            r = (hue - 4/6) * 6
+            g = 0
+            b = 1
+        else
+            r = 1
+            g = 0
+            b = (1 - hue) * 6
+        end
+        
+        timeLabel.TextColor3 = Color3.new(r, g, b)
+    end
+    
+    -- 更新时间函数
+    local function updateTime()
+        -- 获取当前UTC时间
+        local utcTime = os.time()
+        -- 北京时间为UTC+8
+        local beijingTime = utcTime + 8 * 3600
+        
+        -- 格式化为字符串
+        local timeTable = os.date("!*t", beijingTime)
+        local timeString = string.format("%02d:%02d:%02d", timeTable.hour, timeTable.min, timeTable.sec)
+        
+        -- 更新显示
+        timeLabel.Text = timeString
+        
+        -- 更新渐变效果
+        updateGradient()
+    end
+    
+    -- 每秒更新时间
+    local timeConnection
+    timeConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        updateTime()
+    end)
+    
+    -- 初始更新时间
+    updateTime()
+    
+    -- 返回屏幕Gui和连接，以便后续管理
+    return screenGui, timeConnection
+end
+
+-- 创建主UI的函数
 function createAtrumixUI()
-    local Window = WindUI:CreateWindow({
-        Title = "Atrumix｜主页面",
-        Folder = "Atrumix",
-        Size = UDim2.fromOffset(450, 400), -- 增加窗口大小以容纳更多内容
+    local Window = Loaded_Main_Lua:CreateWindow({ --主题配置
+        User = { --玩家名字
+            Enabled = true, --是否启用 (是)
+            Callback = function() --点击
+                print("点击了玩家头像") --打印
+            end, --结束
+            Anonymous = false, --无名氏，
+        },
+        Author = "作者:南烛", --文件名称
+        IconThemed = false, --照片主题
+        ScrollBarEnabled = true, --滚动 (是)
+        Folder = "作者:南烛", --副标题
+        HideSearchBar = false, --是否隐藏搜索栏 (否)
+        Title = "Atrumix", --主标题
+        Transparent = true, --是否透明 (是)
+        SideBarWidth = 200, --边栏宽度
+        Theme = "Dark", --主题 (黑色)
+        Icon = "cat", --图标
+        --Background = "rbxassetid://88271032881974", 背景图片
+        Size = UDim2.fromOffset(700,700), --大小比例
+    })
+    
+    Window:EditOpenButton({ --缩小化
+        StrokeThickness = 1, --边框厚度
+        Title = "［Atrumix］",  --文本
+        Color = ColorSequence.new(Color3.fromHex("#9F88FF"), Color3.fromHex("#28004D")), --颜色渐变
+        Draggable = true, --是否可拖动 是
+        Icon = "cat", --悬浮球图标
+        CornerRadius = UDim.new(1, 0), --圆角
     })
     
     -- 加载通知系统（备用）
@@ -124,9 +298,14 @@ function createAtrumixUI()
     showAdvancedNotification("Atrumix", "作者：南烛    脚本由我一人制作，所以更新速度慢", 4)
     
     -- 创建选项卡
-    local MainTab = Window:Tab({
-        Title = "通用",
+    local HomeTab = Window:Tab({
+        Title = "主页",
         Icon = "house",
+    })
+    
+    local UtilityTab = Window:Tab({
+        Title = "通用",
+        Icon = "settings",
     })
     
     local ServerTab = Window:Tab({
@@ -134,9 +313,9 @@ function createAtrumixUI()
         Icon = "server",
     })
     
-    local IfonTab = Window:Tab({
+    local OtherScriptsTab = Window:Tab({
         Title = "其他脚本",
-        Icon = "code",
+        Icon = "diamond",
     })
     
     local InfoTab = Window:Tab({
@@ -144,12 +323,65 @@ function createAtrumixUI()
         Icon = "info",
     })
     
-    -- ===== 通用选项卡内容 =====
-    MainTab:Section({
-        Title = "感谢您使用Atrumix",
+    -- ===== 主页选项卡内容 =====
+    HomeTab:Section({
+        Title = "联系与加入",
     })
     
-    MainTab:Button({
+    -- 第1个按钮：复制作者QQ号
+    HomeTab:Button({
+        Title = "复制作者QQ号",
+        Callback = function()
+            copyToClipboard("1901671661")
+        end,
+    })
+    
+    -- 第2个按钮：复制QQ群聊
+    HomeTab:Button({
+        Title = "复制QQ群聊",
+        Callback = function()
+            copyToClipboard("445825485")
+        end,
+    })
+    
+    -- 第3个按钮：加入军团
+    HomeTab:Button({
+        Title = "加入军团",
+        Callback = function()
+            copyToClipboard("377108392")
+        end,
+    })
+    
+    HomeTab:Section({
+        Title = "快捷功能",
+    })
+    
+    HomeTab:Button({
+        Title = "欢迎回家",
+        Callback = function()
+            Loaded_Main_Lua:Notify({
+                Title = "欢迎回家",
+                Content = string.format("用户名: %s\n职位: %s%s", 
+                    currentUsername, 
+                    specialMark, 
+                    userPosition
+                ),
+                Duration = 6,
+                Position = "BottomRight",
+                Icon = "user-check",
+                Color = Color3.fromRGB(50, 205, 50),
+                CloseAnimation = "FadeOut",
+                OpenAnimation = "FadeIn"
+            })
+        end,
+    })
+    
+    -- ===== 通用选项卡内容 =====
+    UtilityTab:Section({
+        Title = "服务器功能",
+    })
+    
+    UtilityTab:Button({
         Title = "重新进入服务器",
         Callback = function()
             local LocalPlayer = game.Players.LocalPlayer
@@ -157,10 +389,33 @@ function createAtrumixUI()
         end,
     })
     
-    MainTab:Button({
+    UtilityTab:Section({
+        Title = "脚本功能",
+    })
+    
+    UtilityTab:Button({
         Title = "飞行v3",
         Callback = function()
             loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/d320a26c34e6d73048a3e0ba466088bf79f83430/%E9%A3%9E%E8%A1%8C'))()
+        end,
+    })
+    
+    UtilityTab:Section({
+        Title = "系统功能",
+    })
+    
+    UtilityTab:Button({
+        Title = "刷新界面",
+        Callback = function()
+            game:GetService("CoreGui"):ClearAllChildren()
+            Loaded_Main_Lua:Notify({
+                Title = "界面已刷新",
+                Content = "正在重新加载界面...",
+                Duration = 3,
+                Icon = "refresh-cw"
+            })
+            wait(1)
+            createAtrumixUI()
         end,
     })
     
@@ -216,11 +471,11 @@ function createAtrumixUI()
     })
     
     -- ===== 其他脚本选项卡内容 =====
-    IfonTab:Section({
+    OtherScriptsTab:Section({
         Title = "第三方脚本",
     })
     
-    IfonTab:Button({
+    OtherScriptsTab:Button({
         Title = "皮脚本",
         Callback = function()
             getgenv().XiaoPi = "皮脚本QQ群1059336697"
@@ -228,7 +483,7 @@ function createAtrumixUI()
         end,
     })
     
-    IfonTab:Button({
+    OtherScriptsTab:Button({
         Title = "TX退休",
         Callback = function()
             TX = "脚本群:160369111"
@@ -237,18 +492,18 @@ function createAtrumixUI()
         end,
     })
     
-    IfonTab:Button({
-        Title = "XK脚本",
+    OtherScriptsTab:Button({
+        Title = "SN脚本",
         Callback = function()
-            loadstring("\108\111\97\100\115\116\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\40\34\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\66\73\78\106\105\97\111\98\122\120\54\47\66\73\78\106\105\97\111\47\109\97\105\110\47\88\75\46\84\88\84\34\41\41\40\41\10")()
+            loadstring("\108\111\97\100\115\116\114\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\40\34\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\120\105\97\110\105\110\103\49\53\49\47\83\78\72\85\66\47\109\97\105\110\47\83\78\104\117\98\46\108\117\97\34\41\41\40\41")()
         end,
     })
     
-    IfonTab:Button({
+    OtherScriptsTab:Button({
         Title = "叶脚本",
         Callback = function()
             loadstring(game:HttpGet("https://raw.githubusercontent.com/roblox-ye/QQ515966991/refs/heads/main/ROBLOX-CNVIP-XIAOYE.lua"))()
-        end,
+    end,
     })
     
     -- ===== 信息选项卡内容 =====
@@ -271,7 +526,7 @@ function createAtrumixUI()
                 "脚本由我一人制作，所以更新速度慢\n\n" ..
                 "仅限墨龙‖凌霄军团成员使用\n\n" ..
                 "感谢您的使用与支持！",
-                10 -- 显示8秒后自动关闭
+                10 -- 显示10秒后自动关闭
             )
         end,
     })
@@ -289,14 +544,23 @@ function createAtrumixUI()
         end,
     })
     
-    -- 如果有图像功能的话
-    -- InfoTab:ImageTab({
-    --     Icon = "rbxassetid://81403626624777",
-    -- })
+    InfoTab:Button({
+        Title = "显示用户信息",
+        Callback = function()
+            showAdvancedNotification(
+                "用户信息",
+                "用户名: " .. currentUsername .. "\n" ..
+                "职位: " .. userPosition .. "\n" ..
+                "用户ID: " .. game.Players.LocalPlayer.UserId .. "\n" ..
+                "账户年龄: " .. game.Players.LocalPlayer.AccountAge .. " 天",
+                8
+            )
+        end,
+    })
 end
 
 -- 显示确认弹窗
-WindUI:Popup({
+Loaded_Main_Lua:Popup({
     Title = "Atrumix 脚本确认",
     IconThemed = true,
     Content = "欢迎 " .. game.Players.LocalPlayer.Name .. " 使用Atrumix脚本\n\n" ..
@@ -307,6 +571,12 @@ WindUI:Popup({
             Title = "取消",
             Callback = function() 
                 print("用户取消了脚本执行")
+                Loaded_Main_Lua:Notify({
+                    Title = "已取消",
+                    Content = "脚本执行已被取消",
+                    Duration = 3,
+                    Icon = "info-circle"
+                })
             end,
             Variant = "Secondary",
         },
@@ -314,6 +584,19 @@ WindUI:Popup({
             Title = "执行",
             Icon = "arrow-right",
             Callback = function() 
+                -- 创建右上角北京时间显示
+                createBeijingTimeDisplay()
+                
+                -- 显示创建成功通知
+                Loaded_Main_Lua:Notify({
+                    Title = "已启用北京时间显示",
+                    Content = "已在屏幕右上角显示北京时间\n时间每秒钟更新一次",
+                    Duration = 5,
+                    Position = "TopCenter",
+                    Icon = "clock",
+                    Color = Color3.fromRGB(0, 150, 255)
+                })
+                
                 -- 调用主UI创建函数
                 createAtrumixUI()
             end,
