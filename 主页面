@@ -9,6 +9,7 @@ local allowedUsernames = {
     "sjdjdnddkn",
     "1q2wqqqqqqqqw",
     "nznb666520",
+    "hiemou4",
     -- 可以在这里添加更多用户名，例如：
     -- "User2",
     -- "Player3",
@@ -20,7 +21,8 @@ local userPositions = {
     ["yggcxfchbj"] = "1分队队长",
     ["sjdjdnddkn"] = "4分队队长",
     ["1q2wqqqqqqqqw"] = "军团客人",
-    ［"nznb666520"］ = "测试",
+    ["hiemou4"] = "作者朋友",
+    ["nznb666520"] = "测试",
     -- 指定用户名的职位
     -- 可以在这里添加更多用户的职位配置，例如：
     -- ["User2"] = "普通成员",
