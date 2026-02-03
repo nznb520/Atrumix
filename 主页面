@@ -1,3 +1,5 @@
+--loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E4%B8%BB%E9%A1%B5%E9%9D%A2'))()
+
 -- 只加载一次 WindUI，使用可靠的链接
 local Loaded_Main_Lua = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
@@ -606,3 +608,5 @@ Loaded_Main_Lua:Popup({
         }
     }
 })
+
+--loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E4%B8%BB%E9%A1%B5%E9%9D%A2'))()
