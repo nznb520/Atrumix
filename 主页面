@@ -1,5 +1,3 @@
---loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E4%B8%BB%E9%A1%B5%E9%9D%A2'))()
-
 -- 只加载一次 WindUI，使用可靠的链接
 local Loaded_Main_Lua = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
@@ -357,6 +355,56 @@ function createAtrumixUI()
     })
     
     HomeTab:Section({
+        Title = "脚本公告",
+    })
+    
+    -- 弹出提示按钮（使用变色文本效果）
+    HomeTab:Button({
+        Title = "📢 点击查看脚本公告",
+        Callback = function()
+            -- 创建高级通知显示脚本公告
+            Loaded_Main_Lua:Notify({
+                Title = "📢 脚本公告 - 军团联合训练战",
+                Content = "自今日起，【星夜海】军团与【墨龙 凌霄】军团约定，待手游正式上线后，将联合开启专属【友军训练战】，以战会友、切磋共进。",
+                Duration = 8,
+                Position = "Center",
+                Icon = "megaphone",
+                Color = Color3.fromRGB(255, 165, 0),
+                CloseAnimation = "FadeOut",
+                OpenAnimation = "FadeIn"
+            })
+            
+            -- 等待一会显示详细规则
+            wait(2)
+            
+            Loaded_Main_Lua:Notify({
+                Title = "📋 训练战规则说明",
+                Content = "本次训练战定于手游上线后的第六周正式开启，赛事全程恪守专属规则与注意事项：\n• 参赛人员限定为远古龙战力持有者\n• 战斗中复活所需费用，由双方军团共同承担\n• 对战全程禁用所有技能，仅可使用普通咬击进行对抗\n• 坚守『友谊第一，比赛第二』的核心原则",
+                Duration = 12,
+                Position = "Center",
+                Icon = "clipboard-list",
+                Color = Color3.fromRGB(30, 144, 255),
+                CloseAnimation = "SlideOut",
+                OpenAnimation = "SlideIn"
+            })
+            
+            -- 等待一会显示赛程安排
+            wait(3)
+            
+            Loaded_Main_Lua:Notify({
+                Title = "🏆 赛程安排 & 奖励",
+                Content = "赛事共分三轮依次开展：\n\n【第一轮】军团普通成员对决\n• 双方各派出一名成员进行1V1单挑\n• 存活方即为该局胜者\n\n【第二轮】各分队队长交锋\n• 待所有普通成员完成对战后进行\n• 双方各分队队长接续进行1V1单挑\n• 规则与首轮一致\n\n【第三轮】军团核心战力对决\n• 双方军团的团长与副团长组队配合\n• 展开团副联合作战的对抗比拼\n• 最终取胜的军团将独揽6666龙币的专属奖励",
+                Duration = 15,
+                Position = "Center",
+                Icon = "trophy",
+                Color = Color3.fromRGB(255, 215, 0),
+                CloseAnimation = "ScaleOut",
+                OpenAnimation = "ScaleIn"
+            })
+        end,
+    })
+    
+    HomeTab:Section({
         Title = "快捷功能",
     })
     
@@ -510,6 +558,13 @@ function createAtrumixUI()
     end,
     })
     
+    OtherScriptsTab:Button({
+        Title = "秋蓉",
+        Callback = function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E6%A6%95%E6%A0%91'))()
+    end，
+    })
+    
     -- ===== 信息选项卡内容 =====
     InfoTab:Section({
         Title = "本脚本仅限墨龙‖凌霄军团使用",
@@ -608,5 +663,3 @@ Loaded_Main_Lua:Popup({
         }
     }
 })
-
---loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E4%B8%BB%E9%A1%B5%E9%9D%A2'))()
