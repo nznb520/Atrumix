@@ -1,0 +1,133 @@
+-- 只加载一次 WindUI，使用可靠的链接
+local Loaded_Main_Lua = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- 创建主窗口
+local Window = Loaded_Main_Lua:CreateWindow({
+    User = {
+        Enabled = true,
+        Callback = function()
+            print("点击了玩家头像")
+        end,
+        Anonymous = false,
+    },
+    Author = "by南烛＆逍遥",
+    IconThemed = false,
+    ScrollBarEnabled = true,
+    Folder = "作者:南烛",
+    HideSearchBar = false,
+    Title = "Atrumix",
+    Transparent = true,
+    SideBarWidth = 200,
+    Theme = "Dark",
+    Icon = "cat",
+    Size = UDim2.fromOffset(700, 700),
+})
+
+-- 编辑悬浮球按钮
+Window:EditOpenButton({
+    StrokeThickness = 1,
+    Title = "［Atrumix］",
+    Color = ColorSequence.new(Color3.fromHex("#9F88FF"), Color3.fromHex("#28004D")),
+    Draggable = true,
+    Icon = "cat",
+    CornerRadius = UDim.new(1, 0),
+})
+
+-- ====== 创建主要功能选项卡 ======
+local MainTab = Window:Tab({
+    Title = "主要功能",
+    Icon = "zap",
+})
+
+-- ====== 自动刷球功能 ======
+local autoSpawnEnabled = false
+local autoSpawnConnection = nil
+
+MainTab:Section({
+    Title = "⚡ 自动刷球",
+})
+
+MainTab:Button({
+    Title = "自动刷球",
+    Description = "点击开启/关闭自动刷球功能",
+    Callback = function()
+        if not autoSpawnEnabled then
+            -- 开启功能
+            autoSpawnEnabled = true
+            Loaded_Main_Lua:Notify({
+                Title = "自动刷球",
+                Content = "已开启自动刷球功能\n每秒执行100次",
+                Duration = 3,
+                Position = "BottomRight",
+                Icon = "play",
+                Color = Color3.fromRGB(50, 205, 50)
+            })
+            
+            -- 创建循环任务
+            autoSpawnConnection = task.spawn(function()
+                while autoSpawnEnabled do
+                    task.wait(0.01)  -- 0.01秒 = 每秒100次
+                    local args = {
+                        2,
+                        {
+                            1,
+                            1,
+                            2
+                        }
+                    }
+                    pcall(function()
+                        game:GetService("ReplicatedStorage"):WaitForChild("Project"):WaitForChild("RemoteEvent"):WaitForChild("ControlMessageEvent"):FireServer(unpack(args))
+                    end)
+                end
+            end)
+            
+        else
+            -- 关闭功能
+            autoSpawnEnabled = false
+            if autoSpawnConnection then
+                task.cancel(autoSpawnConnection)
+                autoSpawnConnection = nil
+            end
+            Loaded_Main_Lua:Notify({
+                Title = "自动刷球",
+                Content = "已关闭自动刷球功能",
+                Duration = 3,
+                Position = "BottomRight",
+                Icon = "stop",
+                Color = Color3.fromRGB(239, 68, 68)
+            })
+        end
+    end,
+})
+
+-- 添加状态指示
+MainTab:Label({
+    Title = "状态指示",
+    Text = "点击按钮开启/关闭自动刷球\n开启后按钮会变色提示"
+})
+
+-- ====== 添加一个测试选项卡（可选）=====
+local TestTab = Window:Tab({
+    Title = "其他功能",
+    Icon = "settings",
+})
+
+TestTab:Section({
+    Title = "功能预览",
+})
+
+TestTab:Label({
+    Title = "欢迎使用",
+    Text = "当前玩家: " .. game.Players.LocalPlayer.Name .. "\n脚本作者: 南烛＆逍遥",
+})
+
+-- ====== 显示启动成功通知 ======
+task.wait(0.5)
+Loaded_Main_Lua:Notify({
+    Title = "Atrumix 已启动",
+    Content = "欢迎 " .. game.Players.LocalPlayer.Name .. " 使用\n自动刷球功能已就绪",
+    Duration = 5,
+    Position = "BottomCenter",
+    Icon = "check-circle",
+    Color = Color3.fromRGB(147, 112, 219)
+})
