@@ -1,0 +1,2120 @@
+-- 只加载一次 WindUI，使用可靠的链接
+local Loaded_Main_Lua = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- ====== 用户名检测系统 ======
+-- 【标记】这里可以添加/修改允许的用户名列表
+local allowedUsernames = {
+    "lingxiaoge6",  -- 副团长
+    "yggcxfchbj",   -- 1分队队长
+    "sjdjdnddkn",   -- 4分队队长
+    "1q2wqqqqqqqqw", -- 军团客人
+    "nznb666520",   -- 测试
+    "hiemou4",      -- 作者朋友
+}
+
+-- 用户名对应的职位配置
+local userPositions = {
+    ["lingxiaoge6"] = "副团长", 
+    ["yggcxfchbj"] = "1分队队长",
+    ["sjdjdnddkn"] = "4分队队长",
+    ["1q2wqqqqqqqqw"] = "军团客人",
+    ["hiemou4"] = "作者朋友",
+    ["nznb666520"] = "测试",
+}
+
+-- 获取当前用户名
+local currentUsername = game.Players.LocalPlayer.Name
+
+-- 检查用户名是否在允许列表中
+local function isUserAllowed()
+    for _, allowedName in ipairs(allowedUsernames) do
+        if currentUsername == allowedName then
+            return true
+        end
+    end
+    return false
+end
+
+-- 获取用户职位（如果未配置则返回默认职位）
+local function getUserPosition(username)
+    return userPositions[username] or "军团成员"
+end
+
+-- HttpService 用于JSON处理
+local HttpService = game:GetService("HttpService")
+local settingsFolderName = "Atrumix_Config"
+
+-- 创建文件夹（如果支持）
+if makefolder then 
+    pcall(function() makefolder(settingsFolderName) end) 
+end
+
+-- 保存设置到文件
+local function saveSettings(fileName, data)
+    if writefile then
+        local success, err = pcall(function()
+            writefile(settingsFolderName .. "/" .. fileName .. ".json", HttpService:JSONEncode(data))
+        end)
+        if not success then
+            warn("保存设置失败: " .. tostring(err))
+        end
+    end
+end
+
+-- 从文件加载设置
+local function loadSettings(fileName)
+    if isfile and readfile then
+        local filePath = settingsFolderName .. "/" .. fileName .. ".json"
+        if isfile(filePath) then
+            local fileContent = readfile(filePath)
+            if fileContent then
+                local success, decodedData = pcall(function()
+                    return HttpService:JSONDecode(fileContent)
+                end)
+                if success then return decodedData end
+            end
+        end
+    end
+    return nil
+end
+
+-- 初始化颜色变量（从本地加载）
+local userThemeSettings = loadSettings("user_theme_" .. currentUsername) or {}
+local currentThemeName = userThemeSettings.ThemeName or "🔵 蓝色 (默认)"
+local accentColor = userThemeSettings.Accent or "#1e88e5"
+local outlineColor = userThemeSettings.Outline or "#ffffff"
+local textColor = userThemeSettings.Text or "#ffffff"
+local placeholderTextColor = userThemeSettings.PlaceholderText or "#808080"
+local borderStyle = userThemeSettings.BorderStyle or "⚡ 动态彩虹"
+local borderSpeed = userThemeSettings.BorderSpeed or 1.0
+
+-- ====== 预定义颜色主题 ======
+local colorThemes = {
+    -- 基础色系
+    ["🔵 蓝色 (默认)"] = {
+        Accent = "#1e88e5",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "经典蓝色主题"
+    },
+    ["🟣 紫色"] = {
+        Accent = "#9c27b0",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#a0a0a0",
+        Description = "优雅紫色主题"
+    },
+    ["🔴 红色"] = {
+        Accent = "#f44336",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#a0a0a0",
+        Description = "热情红色主题"
+    },
+    ["🟢 绿色"] = {
+        Accent = "#4caf50",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#a0a0a0",
+        Description = "清新绿色主题"
+    },
+    ["🟡 黄色"] = {
+        Accent = "#ffc107",
+        Outline = "#333333",
+        Text = "#333333",
+        Placeholder = "#666666",
+        Description = "明亮黄色主题"
+    },
+    ["🟠 橙色"] = {
+        Accent = "#ff9800",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#a0a0a0",
+        Description = "活力橙色主题"
+    },
+    ["💗 粉色"] = {
+        Accent = "#e91e63",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#a0a0a0",
+        Description = "甜美粉色主题"
+    },
+    ["🖤 黑色"] = {
+        Accent = "#212121",
+        Outline = "#4caf50",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "暗黑风格主题"
+    },
+    ["✨ 青色"] = {
+        Accent = "#00bcd4",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#a0a0a0",
+        Description = "海洋青色主题"
+    },
+    ["💙 深蓝"] = {
+        Accent = "#0d47a1",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "深邃蓝主题"
+    },
+    ["💜 紫罗兰"] = {
+        Accent = "#673ab7",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#a0a0a0",
+        Description = "高贵紫罗兰"
+    },
+    ["❤️ 深红"] = {
+        Accent = "#b71c1c",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "庄重深红主题"
+    },
+    ["💚 翠绿"] = {
+        Accent = "#2e7d32",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "自然翠绿主题"
+    },
+    ["🧡 琥珀"] = {
+        Accent = "#ff6f00",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "温暖琥珀主题"
+    },
+    ["🌈 彩虹"] = {
+        Accent = "#ff4081",
+        Outline = "#7c4dff",
+        Text = "#ffffff",
+        Placeholder = "#a0a0a0",
+        Description = "多彩彩虹主题"
+    },
+    ["🌊 海洋"] = {
+        Accent = "#006064",
+        Outline = "#00acc1",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "深邃海洋主题"
+    },
+    ["🌿 森林"] = {
+        Accent = "#1b5e20",
+        Outline = "#81c784",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "宁静森林主题"
+    },
+    ["🌅 日落"] = {
+        Accent = "#bf360c",
+        Outline = "#ffb74d",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "浪漫日落主题"
+    },
+    ["🌙 月光"] = {
+        Accent = "#37474f",
+        Outline = "#b0bec5",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "静谧月光主题"
+    },
+    ["✨ 星尘"] = {
+        Accent = "#311b92",
+        Outline = "#b388ff",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "梦幻星尘主题"
+    },
+    ["🎨 自定义"] = {
+        Accent = "#1e88e5",
+        Outline = "#ffffff",
+        Text = "#ffffff",
+        Placeholder = "#808080",
+        Description = "点击下方颜色选择器自定义"
+    }
+}
+
+-- ====== 边框样式配置 ======
+local borderStyles = {
+    ["⚡ 动态彩虹"] = {
+        type = "rainbow",
+        colors = {"#ff0000", "#ff7f00", "#ffff00", "#00ff00", "#0000ff", "#4b0082", "#8f00ff"},
+        speed = borderSpeed,
+        description = "七色动态彩虹渐变"
+    },
+    ["🔥 火焰"] = {
+        type = "gradient",
+        colors = {"#ff4500", "#ff8c00", "#ffd700", "#ff4500"},
+        speed = borderSpeed,
+        description = "红橙黄火焰渐变"
+    },
+    ["💧 海洋"] = {
+        type = "gradient",
+        colors = {"#00ffff", "#1e90ff", "#0000cd", "#00ffff"},
+        speed = borderSpeed,
+        description = "蓝青色海洋渐变"
+    },
+    ["🌿 森林"] = {
+        type = "gradient",
+        colors = {"#228b22", "#32cd32", "#7cfc00", "#228b22"},
+        speed = borderSpeed,
+        description = "绿色森林渐变"
+    },
+    ["🌸 樱花"] = {
+        type = "gradient",
+        colors = {"#ffb7c5", "#ff69b4", "#ff1493", "#ffb7c5"},
+        speed = borderSpeed,
+        description = "粉红樱花渐变"
+    },
+    ["🌅 日落"] = {
+        type = "gradient",
+        colors = {"#ff4500", "#ff8c00", "#ffd700", "#ff1493"},
+        speed = borderSpeed,
+        description = "橙红粉日落渐变"
+    },
+    ["🌈 彩虹渐变"] = {
+        type = "gradient",
+        colors = {"#ff0000", "#ff7f00", "#ffff00", "#00ff00", "#0000ff", "#4b0082", "#8f00ff"},
+        speed = borderSpeed,
+        description = "七色循环渐变"
+    },
+    ["💜 紫罗兰"] = {
+        type = "gradient",
+        colors = {"#8a2be2", "#9370db", "#ba55d3", "#8a2be2"},
+        speed = borderSpeed,
+        description = "紫色系渐变"
+    },
+    ["💛 黄金"] = {
+        type = "gradient",
+        colors = {"#ffd700", "#f0e68c", "#ffff00", "#ffd700"},
+        speed = borderSpeed,
+        description = "金色渐变"
+    },
+    ["❄️ 极光"] = {
+        type = "gradient",
+        colors = {"#7cfc00", "#00fa9a", "#00ffff", "#7cfc00"},
+        speed = borderSpeed,
+        description = "绿蓝极光渐变"
+    },
+    ["🎆 烟火"] = {
+        type = "random",
+        colors = {"#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff"},
+        speed = borderSpeed * 2,
+        description = "随机彩色变化"
+    },
+    ["💎 宝石"] = {
+        type = "gradient",
+        colors = {"#ff1493", "#9400d3", "#4b0082", "#ff1493"},
+        speed = borderSpeed,
+        description = "红紫宝石渐变"
+    },
+    ["🌌 银河"] = {
+        type = "rainbow",
+        colors = {"#4b0082", "#8a2be2", "#9370db", "#ba55d3", "#ff1493"},
+        speed = borderSpeed * 0.8,
+        description = "梦幻银河渐变"
+    },
+    ["🍁 秋叶"] = {
+        type = "gradient",
+        colors = {"#8b4513", "#d2691e", "#ff8c00", "#8b4513"},
+        speed = borderSpeed,
+        description = "棕橙秋叶渐变"
+    },
+    ["💫 星辉"] = {
+        type = "gradient",
+        colors = {"#ffffff", "#f0f8ff", "#e6e6fa", "#ffffff"},
+        speed = borderSpeed,
+        description = "白蓝星辉渐变"
+    }
+}
+
+-- 生成边框样式列表
+local borderStyleNames = {}
+for name, _ in pairs(borderStyles) do
+    table.insert(borderStyleNames, name)
+end
+table.sort(borderStyleNames)
+
+-- ====== 聊天系统 ======
+local ChatSystem = {
+    enabled = false,
+    chatWindow = nil,
+    messages = {},
+    maxMessages = 20,
+    listeners = {},
+    messageBox = nil,
+    inputBox = nil,
+    toggleButton = nil,
+    updateConnection = nil
+}
+
+-- 创建聊天GUI
+function ChatSystem:CreateChatGUI()
+    if self.chatWindow then return end
+    
+    -- 创建主框架
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "GlobalChatSystem"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Parent = game:GetService("CoreGui")
+    
+    -- 聊天窗口
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "ChatWindow"
+    mainFrame.Size = UDim2.new(0, 400, 0, 320)
+    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -160)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    mainFrame.BackgroundTransparency = 0.1
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.Visible = false
+    mainFrame.Parent = screenGui
+    
+    -- 圆角
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = mainFrame
+    
+    -- 边框
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromHex(accentColor)
+    stroke.Thickness = 2
+    stroke.Parent = mainFrame
+    
+    -- 标题栏
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Size = UDim2.new(1, 0, 0, 30)
+    titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = mainFrame
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 10)
+    titleCorner.Parent = titleBar
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "TitleLabel"
+    titleLabel.Size = UDim2.new(1, -40, 1, 0)
+    titleLabel.Position = UDim2.new(0, 10, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "全局聊天系统"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 16
+    titleLabel.Font = Enum.Font.GothamSemibold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = titleBar
+    
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Size = UDim2.new(0, 30, 0, 30)
+    closeButton.Position = UDim2.new(1, -30, 0, 0)
+    closeButton.BackgroundTransparency = 1
+    closeButton.Text = "✕"
+    closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+    closeButton.TextSize = 20
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.Parent = titleBar
+    
+    closeButton.MouseButton1Click:Connect(function()
+        self:ToggleChat()
+    end)
+    
+    -- 消息显示区域
+    local messageBox = Instance.new("ScrollingFrame")
+    messageBox.Name = "MessageBox"
+    messageBox.Size = UDim2.new(1, -20, 1, -80)
+    messageBox.Position = UDim2.new(0, 10, 0, 40)
+    messageBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    messageBox.BackgroundTransparency = 0.5
+    messageBox.BorderSizePixel = 0
+    messageBox.CanvasSize = UDim2.new(0, 0, 0, 0)
+    messageBox.ScrollBarThickness = 8
+    messageBox.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    messageBox.Parent = mainFrame
+    
+    local msgCorner = Instance.new("UICorner")
+    msgCorner.CornerRadius = UDim.new(0, 8)
+    msgCorner.Parent = messageBox
+    
+    -- 消息列表布局
+    local msgListLayout = Instance.new("UIListLayout")
+    msgListLayout.Padding = UDim.new(0, 5)
+    msgListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    msgListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+    msgListLayout.Parent = messageBox
+    
+    -- 输入区域
+    local inputFrame = Instance.new("Frame")
+    inputFrame.Name = "InputFrame"
+    inputFrame.Size = UDim2.new(1, -20, 0, 35)
+    inputFrame.Position = UDim2.new(0, 10, 1, -45)
+    inputFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    inputFrame.BackgroundTransparency = 0.5
+    inputFrame.BorderSizePixel = 0
+    inputFrame.Parent = mainFrame
+    
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 8)
+    inputCorner.Parent = inputFrame
+    
+    local inputBox = Instance.new("TextBox")
+    inputBox.Name = "InputBox"
+    inputBox.Size = UDim2.new(1, -90, 1, -10)
+    inputBox.Position = UDim2.new(0, 5, 0, 5)
+    inputBox.BackgroundTransparency = 1
+    inputBox.PlaceholderText = "输入消息..."
+    inputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+    inputBox.Text = ""
+    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inputBox.TextSize = 14
+    inputBox.Font = Enum.Font.Gotham
+    inputBox.ClearTextOnFocus = false
+    inputBox.Parent = inputFrame
+    
+    local sendButton = Instance.new("TextButton")
+    sendButton.Name = "SendButton"
+    sendButton.Size = UDim2.new(0, 75, 1, -10)
+    sendButton.Position = UDim2.new(1, -80, 0, 5)
+    sendButton.BackgroundColor3 = Color3.fromHex(accentColor)
+    sendButton.Text = "发送"
+    sendButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sendButton.TextSize = 14
+    sendButton.Font = Enum.Font.GothamSemibold
+    sendButton.Parent = inputFrame
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = sendButton
+    
+    -- 切换按钮
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleChatButton"
+    toggleButton.Size = UDim2.new(0, 120, 0, 35)
+    toggleButton.Position = UDim2.new(0, 10, 1, -45)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    toggleButton.BackgroundTransparency = 0.3
+    toggleButton.Text = "💬 打开聊天"
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.TextSize = 14
+    toggleButton.Font = Enum.Font.GothamSemibold
+    toggleButton.Parent = screenGui
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 8)
+    toggleCorner.Parent = toggleButton
+    
+    toggleButton.MouseButton1Click:Connect(function()
+        self:ToggleChat()
+    end)
+    
+    sendButton.MouseButton1Click:Connect(function()
+        self:SendMessage(inputBox.Text)
+        inputBox.Text = ""
+    end)
+    
+    inputBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed and inputBox.Text ~= "" then
+            self:SendMessage(inputBox.Text)
+            inputBox.Text = ""
+        end
+    end)
+    
+    self.chatWindow = mainFrame
+    self.messageBox = messageBox
+    self.inputBox = inputBox
+    self.toggleButton = toggleButton
+    self.screenGui = screenGui
+    
+    -- 加载历史消息
+    self:LoadMessages()
+    
+    -- 开始接收消息
+    self:StartReceiving()
+end
+
+-- 加载历史消息
+function ChatSystem:LoadMessages()
+    local savedMessages = loadSettings("chat_history_" .. currentUsername)
+    if savedMessages and savedMessages.messages then
+        self.messages = savedMessages.messages
+        for _, msg in ipairs(self.messages) do
+            self:AddMessageToDisplay(msg)
+        end
+    end
+end
+
+-- 保存消息历史
+function ChatSystem:SaveMessages()
+    saveSettings("chat_history_" .. currentUsername, {
+        messages = self.messages
+    })
+end
+
+-- 添加消息到显示
+function ChatSystem:AddMessageToDisplay(message)
+    if not self.messageBox then return end
+    
+    local msgLabel = Instance.new("TextLabel")
+    msgLabel.Size = UDim2.new(1, -10, 0, 25)
+    msgLabel.Position = UDim2.new(0, 5, 0, 0)
+    msgLabel.BackgroundTransparency = 1
+    msgLabel.Text = message
+    msgLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+    msgLabel.TextSize = 13
+    msgLabel.Font = Enum.Font.Gotham
+    msgLabel.TextXAlignment = Enum.TextXAlignment.Left
+    msgLabel.Parent = self.messageBox
+    
+    -- 自动滚动到底部
+    task.wait()
+    self.messageBox.CanvasPosition = Vector2.new(0, self.messageBox.AbsoluteCanvasSize.Y)
+end
+
+-- 切换聊天窗口
+function ChatSystem:ToggleChat()
+    if not self.chatWindow then return end
+    
+    self.enabled = not self.enabled
+    self.chatWindow.Visible = self.enabled
+    self.toggleButton.Text = self.enabled and "💬 关闭聊天" or "💬 打开聊天"
+end
+
+-- 发送消息
+function ChatSystem:SendMessage(text)
+    if not text or text == "" then return end
+    
+    local timestamp = os.date("%H:%M:%S")
+    local message = string.format("[%s] %s: %s", timestamp, currentUsername, text)
+    
+    -- 添加到本地消息
+    table.insert(self.messages, message)
+    if #self.messages > self.maxMessages then
+        table.remove(self.messages, 1)
+    end
+    
+    -- 更新显示
+    self:AddMessageToDisplay(message)
+    
+    -- 保存历史
+    self:SaveMessages()
+    
+    -- 广播消息
+    self:BroadcastMessage(message)
+end
+
+-- 接收消息
+function ChatSystem:ReceiveMessage(message)
+    table.insert(self.messages, message)
+    if #self.messages > self.maxMessages then
+        table.remove(self.messages, 1)
+    end
+    
+    self:AddMessageToDisplay(message)
+    self:SaveMessages()
+end
+
+-- 广播消息
+function ChatSystem:BroadcastMessage(message)
+    -- 使用BindableEvent在脚本实例间通信
+    if not self.bindableEvent then
+        self.bindableEvent = Instance.new("BindableEvent")
+        self.bindableEvent.Name = "ChatBroadcast"
+        self.bindableEvent.Parent = game:GetService("CoreGui")
+    end
+    
+    self.bindableEvent:Fire(message)
+end
+
+-- 开始接收消息
+function ChatSystem:StartReceiving()
+    if self.updateConnection then
+        self.updateConnection:Disconnect()
+    end
+    
+    -- 创建接收事件
+    if not self.receiveEvent then
+        self.receiveEvent = Instance.new("BindableEvent")
+        self.receiveEvent.Name = "ChatReceive"
+        self.receiveEvent.Parent = game:GetService("CoreGui")
+    end
+    
+    -- 监听广播
+    local broadcastEvent = game:GetService("CoreGui"):FindFirstChild("ChatBroadcast")
+    if broadcastEvent then
+        self.updateConnection = broadcastEvent.Event:Connect(function(message)
+            -- 避免接收自己发送的消息
+            if not message:find(currentUsername .. ":") then
+                self:ReceiveMessage(message)
+            end
+        end)
+    end
+    
+    -- 每秒检查一次新消息
+    spawn(function()
+        while self.chatWindow and self.chatWindow.Parent do
+            task.wait(1)
+            -- 可以在这里添加从服务器获取消息的逻辑
+        end
+    end)
+end
+
+-- 销毁聊天系统
+function ChatSystem:Destroy()
+    if self.updateConnection then
+        self.updateConnection:Disconnect()
+    end
+    if self.screenGui then
+        self.screenGui:Destroy()
+    end
+    self.chatWindow = nil
+    self.messageBox = nil
+    self.inputBox = nil
+    self.toggleButton = nil
+    self.screenGui = nil
+end
+
+-- ====== 检测使用本脚本的玩家 ======
+local function detectScriptUsers()
+    local users = {}
+    
+    -- 通过BindableEvent检测
+    local coreGui = game:GetService("CoreGui")
+    local chatBroadcast = coreGui:FindFirstChild("ChatBroadcast")
+    local chatReceive = coreGui:FindFirstChild("ChatReceive")
+    
+    if chatBroadcast or chatReceive then
+        -- 如果存在这些事件，说明有脚本在运行
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            table.insert(users, player.Name)
+        end
+    end
+    
+    return users
+end
+
+-- ====== 踢出玩家函数 ======
+local function kickPlayer(playerName)
+    local player = game.Players:FindFirstChild(playerName)
+    if player then
+        -- 尝试通过多种方式踢出
+        pcall(function()
+            player:Kick("您已被管理员踢出")
+        end)
+        
+        -- 如果上面方法失败，尝试其他方法
+        pcall(function()
+            local message = Instance.new("Message")
+            message.Parent = game.Workspace
+            message.Text = playerName .. " 已被踢出"
+            game:GetService("Debris"):AddItem(message, 3)
+        end)
+        
+        return true
+    end
+    return false
+end
+
+-- ====== 创建动态边框 ======
+local function createDynamicBorder(frame, style, speed)
+    if not frame then return end
+    
+    local borderConnection
+    local hue = 0
+    local colorIndex = 1
+    
+    local function updateBorder()
+        if not frame or not frame.Parent then
+            if borderConnection then
+                borderConnection:Disconnect()
+            end
+            return
+        end
+        
+        local styleData = borderStyles[style]
+        if not styleData then return end
+        
+        if styleData.type == "rainbow" then
+            -- 彩虹渐变
+            hue = (hue + (0.01 * speed)) % 1
+            local color = Color3.fromHSV(hue, 1, 1)
+            
+            -- 更新边框颜色
+            local stroke = frame:FindFirstChildOfClass("UIStroke")
+            if stroke then
+                stroke.Color = color
+            end
+            
+            -- 更新打开按钮边框
+            local openButton = Loaded_Main_Lua:GetOpenButton()
+            if openButton then
+                local btnStroke = openButton:FindFirstChildOfClass("UIStroke")
+                if btnStroke then
+                    btnStroke.Color = color
+                end
+            end
+            
+        elseif styleData.type == "gradient" then
+            -- 渐变循环
+            colorIndex = colorIndex + (0.05 * speed)
+            if colorIndex > #styleData.colors then
+                colorIndex = 1
+            end
+            
+            local nextIndex = colorIndex + 1
+            if nextIndex > #styleData.colors then
+                nextIndex = 1
+            end
+            
+            local color1 = Color3.fromHex(styleData.colors[math.floor(colorIndex)])
+            local color2 = Color3.fromHex(styleData.colors[math.floor(nextIndex)])
+            
+            -- 插值颜色
+            local progress = colorIndex - math.floor(colorIndex)
+            local r = color1.R + (color2.R - color1.R) * progress
+            local g = color1.G + (color2.G - color1.G) * progress
+            local b = color1.B + (color2.B - color1.B) * progress
+            
+            local stroke = frame:FindFirstChildOfClass("UIStroke")
+            if stroke then
+                stroke.Color = Color3.new(r, g, b)
+            end
+            
+            -- 更新打开按钮
+            local openButton = Loaded_Main_Lua:GetOpenButton()
+            if openButton then
+                local btnStroke = openButton:FindFirstChildOfClass("UIStroke")
+                if btnStroke then
+                    btnStroke.Color = Color3.new(r, g, b)
+                end
+            end
+            
+        elseif styleData.type == "random" then
+            -- 随机颜色
+            local randomIndex = math.random(1, #styleData.colors)
+            local color = Color3.fromHex(styleData.colors[randomIndex])
+            
+            local stroke = frame:FindFirstChildOfClass("UIStroke")
+            if stroke then
+                stroke.Color = color
+            end
+            
+            -- 更新打开按钮
+            local openButton = Loaded_Main_Lua:GetOpenButton()
+            if openButton then
+                local btnStroke = openButton:FindFirstChildOfClass("UIStroke")
+                if btnStroke then
+                    btnStroke.Color = color
+                end
+            end
+        end
+    end
+    
+    -- 创建连接
+    borderConnection = game:GetService("RunService").Heartbeat:Connect(updateBorder)
+    
+    return borderConnection
+end
+
+-- ====== 保存用户主题设置 ======
+local function saveUserThemeSettings()
+    saveSettings("user_theme_" .. currentUsername, {
+        ThemeName = currentThemeName,
+        Accent = accentColor,
+        Outline = outlineColor,
+        Text = textColor,
+        PlaceholderText = placeholderTextColor,
+        BorderStyle = borderStyle,
+        BorderSpeed = borderSpeed,
+        LastUpdated = os.time()
+    })
+end
+
+-- ====== 更新主题 ======
+local function updateTheme(borderConnection)
+    -- 创建自定义主题
+    local customTheme = {
+        Name = currentThemeName,
+        Accent = accentColor,
+        Outline = outlineColor,
+        Text = textColor,
+        PlaceholderText = placeholderTextColor,
+    }
+    
+    -- 添加到WindUI主题系统
+    local success = pcall(function()
+        Loaded_Main_Lua:AddTheme(customTheme)
+        Loaded_Main_Lua:SetTheme(currentThemeName)
+    end)
+    
+    if success then
+        -- 保存主题设置
+        saveUserThemeSettings()
+        
+        Loaded_Main_Lua:Notify({
+            Title = "主题已更新",
+            Content = "当前主题: " .. currentThemeName .. "\n边框样式: " .. borderStyle,
+            Icon = "palette",
+            Duration = 3,
+        })
+    end
+end
+
+-- 如果不是军团成员，执行踢出操作
+if not isUserAllowed() then
+    Loaded_Main_Lua:Notify({
+        Title = "Atrumix - 访问被拒绝",
+        Content = "你不是军团成员\nYou're not a Legionnaire",
+        Duration = 5,
+        Position = "Center",
+        Icon = "ban",
+        Color = Color3.fromRGB(220, 20, 60)
+    })
+    wait(2)
+    game.Players.LocalPlayer:Kick("你不是军团成员 | You're not a Legionnaire")
+    return
+end
+
+-- ====== 正常脚本执行 ======
+
+-- 创建高级通知函数
+function showAdvancedNotification(title, description, duration)
+    Loaded_Main_Lua:Notify({
+        Title = title,
+        Content = description,
+        Duration = duration or 5,
+        Position = "BottomLeft",
+        CloseAnimation = "SlideOut",
+        OpenAnimation = "SlideIn",
+        Icon = "info-circle",
+        Color = Color3.fromRGB(80, 120, 200)
+    })
+end
+
+-- 显示欢迎回家的通知
+local userPosition = getUserPosition(currentUsername)
+
+local specialMark = ""
+if currentUsername == "lingxiaoge6" then
+    specialMark = "⭐ "
+end
+
+Loaded_Main_Lua:Notify({
+    Title = "欢迎回家",
+    Content = string.format("用户名: %s\n职位: %s%s", 
+        currentUsername, 
+        specialMark, 
+        userPosition
+    ),
+    Duration = 6,
+    Position = "BottomRight",
+    Icon = "user-check",
+    Color = Color3.fromRGB(50, 205, 50),
+    CloseAnimation = "FadeOut",
+    OpenAnimation = "FadeIn"
+})
+
+-- 复制到剪贴板函数
+local function copyToClipboard(text)
+    if setclipboard then
+        setclipboard(text)
+        Loaded_Main_Lua:Notify({
+            Title = "复制成功",
+            Content = "已复制到剪贴板: " .. text,
+            Duration = 3,
+            Icon = "copy",
+            Color = Color3.fromRGB(34, 197, 94)
+        })
+    else
+        Loaded_Main_Lua:Notify({
+            Title = "复制失败",
+            Content = "当前环境不支持剪贴板功能",
+            Duration = 3,
+            Icon = "x-circle",
+            Color = Color3.fromRGB(239, 68, 68)
+        })
+    end
+end
+
+-- ====== 游戏ID与脚本映射配置 ======
+local GameScripts = {
+    [10253248401] = {"元素力量大亨", "https://raw.githubusercontent.com/nznb520/Atrumix/042524fac05940b1b1a9389a0bbb9572441b1bc3/%E5%85%83%E7%B4%A0%E5%8A%9B%E9%87%8F%E5%A4%A7%E4%BA%A8"},
+    [79546208627805] = {"99夜", "https://raw.githubusercontent.com/nznb520/Atrumix/cca264ca9a72738d7d0f51b3e5bd31a764e9d0ec/99%E5%A4%9C"},
+    [131716211654599] = {"鱼", "https://raw.githubusercontent.com/nznb520/Atrumix/881626be7e7cc72ac677c9cf375f3cb8c794eb55/%E9%B1%BC"},
+    [13772394625] = {"刀刃球", "https://raw.githubusercontent.com/nznb520/Atrumix/b71ce91c007fd0cc5e3866c8c13ef8ee13ac17a9/%E5%88%80%E5%88%83%E7%90%83"},
+    [124977557560410] = {"种植花园", "https://raw.githubusercontent.com/nznb520/Atrumix/045a07f1bbe87ad4d96f2ba8f2ab015db004bf20/%E7%A7%8D%E6%A4%8D%E8%8A%B1%E5%9B%AD"},
+    [7541759836] = {"凹凸世界", "https://raw.githubusercontent.com/nznb520/Atrumix/main/%E5%87%B9%E5%87%B8%E4%B8%96%E7%95%8C.lua"}
+}
+
+-- 自动检测并执行函数
+local function autoDetectAndExecute()
+    local currentGameId = game.PlaceId
+    local gameInfo = GameScripts[currentGameId]
+    
+    if gameInfo then
+        Loaded_Main_Lua:Notify({
+            Title = "检测到支持的游戏",
+            Content = string.format("游戏名称: %s\n游戏ID: %d", gameInfo[1], currentGameId),
+            Duration = 5,
+            Icon = "check-circle",
+            Color = Color3.fromRGB(34, 197, 94)
+        })
+        wait(1)
+        Loaded_Main_Lua:Notify({
+            Title = "正在加载脚本",
+            Content = string.format("正在为【%s】加载脚本...", gameInfo[1]),
+            Duration = 3,
+            Icon = "download",
+            Color = Color3.fromRGB(59, 130, 246)
+        })
+        
+        local success, errorMsg = pcall(function()
+            local scriptContent = game:HttpGet(gameInfo[2])
+            if scriptContent and #scriptContent > 0 then
+                local loadSuccess, loadError = loadstring(scriptContent)
+                if loadSuccess then
+                    loadSuccess()
+                else
+                    error("脚本编译失败: " .. tostring(loadError))
+                end
+            else
+                error("获取的脚本内容为空")
+            end
+        end)
+        
+        if success then
+            Loaded_Main_Lua:Notify({
+                Title = "脚本加载成功",
+                Content = string.format("【%s】脚本已成功加载！", gameInfo[1]),
+                Duration = 4,
+                Icon = "check",
+                Color = Color3.fromRGB(34, 197, 94)
+            })
+        else
+            if gameInfo[1] == "凹凸世界" then
+                Loaded_Main_Lua:Notify({
+                    Title = "尝试备用链接",
+                    Content = "正在尝试使用备用链接加载凹凸世界脚本...",
+                    Duration = 3,
+                    Icon = "refresh-cw",
+                    Color = Color3.fromRGB(255, 165, 0)
+                })
+                
+                local backupSuccess, backupError = pcall(function()
+                    local backupContent = game:HttpGet("https://raw.githubusercontent.com/nznb520/Atrumix/main/%E5%87%B9%E5%87%B8%E4%B8%96%E7%95%8C")
+                    if backupContent and #backupContent > 0 then
+                        local loadBackupSuccess, loadBackupError = loadstring(backupContent)
+                        if loadBackupSuccess then
+                            loadBackupSuccess()
+                        else
+                            error("备用脚本编译失败: " .. tostring(loadBackupError))
+                        end
+                    else
+                        error("获取的备用脚本内容为空")
+                    end
+                end)
+                
+                if backupSuccess then
+                    Loaded_Main_Lua:Notify({
+                        Title = "脚本加载成功",
+                        Content = "【凹凸世界】脚本已通过备用链接成功加载！",
+                        Duration = 4,
+                        Icon = "check",
+                        Color = Color3.fromRGB(34, 197, 94)
+                    })
+                else
+                    Loaded_Main_Lua:Notify({
+                        Title = "脚本加载失败",
+                        Content = string.format("凹凸世界脚本加载失败\n错误: %s", tostring(errorMsg)),
+                        Duration = 5,
+                        Icon = "x-circle",
+                        Color = Color3.fromRGB(239, 68, 68)
+                    })
+                end
+            else
+                Loaded_Main_Lua:Notify({
+                    Title = "脚本加载失败",
+                    Content = string.format("加载失败: %s", tostring(errorMsg)),
+                    Duration = 5,
+                    Icon = "x-circle",
+                    Color = Color3.fromRGB(239, 68, 68)
+                })
+            end
+        end
+    else
+        Loaded_Main_Lua:Notify({
+            Title = "未检测到支持的游戏",
+            Content = string.format("当前游戏ID: %d\n此游戏暂无自动脚本", currentGameId),
+            Duration = 6,
+            Icon = "alert-circle",
+            Color = Color3.fromRGB(245, 158, 11)
+        })
+        wait(1)
+        
+        local supportedGames = ""
+        local count = 0
+        for gameId, info in pairs(GameScripts) do
+            count = count + 1
+            if count <= 5 then
+                supportedGames = supportedGames .. string.format("%d. %s\n", count, info[1])
+            end
+        end
+        if count > 5 then
+            supportedGames = supportedGames .. string.format("... 等%d个游戏", count)
+        end
+        
+        Loaded_Main_Lua:Notify({
+            Title = "已支持的游戏",
+            Content = supportedGames,
+            Duration = 8,
+            Icon = "list",
+            Color = Color3.fromRGB(139, 92, 246)
+        })
+    end
+end
+
+-- ====== 创建右上角时间显示函数 ======
+local function createBeijingTimeDisplay()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "BeijingTimeDisplay"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.Parent = game:GetService("CoreGui")
+    
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "TimeFrame"
+    mainFrame.Size = UDim2.new(0, 200, 0, 60)
+    mainFrame.Position = UDim2.new(1, -210, 0, 10)
+    mainFrame.AnchorPoint = Vector2.new(0, 0)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    mainFrame.BackgroundTransparency = 0.3
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = false
+    mainFrame.Selectable = false
+    mainFrame.Draggable = false
+    mainFrame.Parent = screenGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = mainFrame
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(100, 100, 150)
+    stroke.Thickness = 2
+    stroke.Parent = mainFrame
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "TitleLabel"
+    titleLabel.Size = UDim2.new(1, 0, 0, 20)
+    titleLabel.Position = UDim2.new(0, 0, 0, 5)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "北京时间"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 14
+    titleLabel.Font = Enum.Font.GothamSemibold
+    titleLabel.Parent = mainFrame
+    
+    local timeLabel = Instance.new("TextLabel")
+    timeLabel.Name = "TimeLabel"
+    timeLabel.Size = UDim2.new(1, 0, 0, 30)
+    timeLabel.Position = UDim2.new(0, 0, 0, 25)
+    timeLabel.BackgroundTransparency = 1
+    timeLabel.Text = "00:00:00"
+    timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    timeLabel.TextSize = 20
+    timeLabel.Font = Enum.Font.GothamBold
+    timeLabel.Parent = mainFrame
+    
+    local function updateGradient()
+        local hue = tick() % 10 / 10
+        local r, g, b
+        if hue < 1/6 then
+            r = 1; g = hue * 6; b = 0
+        elseif hue < 2/6 then
+            r = (2/6 - hue) * 6; g = 1; b = 0
+        elseif hue < 3/6 then
+            r = 0; g = 1; b = (hue - 2/6) * 6
+        elseif hue < 4/6 then
+            r = 0; g = (4/6 - hue) * 6; b = 1
+        elseif hue < 5/6 then
+            r = (hue - 4/6) * 6; g = 0; b = 1
+        else
+            r = 1; g = 0; b = (1 - hue) * 6
+        end
+        timeLabel.TextColor3 = Color3.new(r, g, b)
+    end
+    
+    local function updateTime()
+        local utcTime = os.time()
+        local beijingTime = utcTime + 8 * 3600
+        local timeTable = os.date("!*t", beijingTime)
+        local timeString = string.format("%02d:%02d:%02d", timeTable.hour, timeTable.min, timeTable.sec)
+        timeLabel.Text = timeString
+        updateGradient()
+    end
+    
+    local timeConnection
+    timeConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        updateTime()
+    end)
+    updateTime()
+    
+    return screenGui, timeConnection
+end
+
+-- ====== 创建主UI的函数 ======
+function createAtrumixUI()
+    local Window = Loaded_Main_Lua:CreateWindow({
+        User = {
+            Enabled = true,
+            Callback = function()
+                Loaded_Main_Lua:Notify({
+                    Title = "玩家信息",
+                    Content = "用户名: " .. currentUsername .. "\n职位: " .. getUserPosition(currentUsername),
+                    Duration = 4,
+                    Icon = "user",
+                    Color = Color3.fromRGB(59, 130, 246)
+                })
+            end,
+            Anonymous = false,
+        },
+        Author = "作者:南烛",
+        IconThemed = false,
+        ScrollBarEnabled = true,
+        Folder = "作者:南烛",
+        HideSearchBar = false,
+        Title = "Atrumix",
+        Transparent = true,
+        SideBarWidth = 200,
+        Theme = currentThemeName,
+        Icon = "cat",
+        Size = UDim2.fromOffset(700,700),
+    })
+    
+    -- 添加边框
+    local windowFrame = Window:GetWindowFrame()
+    if windowFrame then
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = 3
+        stroke.Color = Color3.fromHex(accentColor)
+        stroke.Parent = windowFrame
+        
+        -- 开始动态边框
+        local borderConnection = createDynamicBorder(windowFrame, borderStyle, borderSpeed)
+    end
+    
+    Window:EditOpenButton({
+        StrokeThickness = 1,
+        Title = "［Atrumix］",
+        Color = ColorSequence.new(Color3.fromHex(accentColor), Color3.fromHex("#28004D")),
+        Draggable = true,
+        Icon = "cat",
+        CornerRadius = UDim.new(1, 0),
+    })
+    
+    -- 显示欢迎通知
+    showAdvancedNotification("Atrumix", "执行成功", 3)
+    showAdvancedNotification("Atrumix", "感谢您使用ᵃᵗʳᵘᵐⁱˣ", 3)
+    showAdvancedNotification("Atrumix", "本脚本仅限墨龙‖凌霄军团使用", 3)
+    showAdvancedNotification("Atrumix", "作者：南烛    脚本由我一人制作，所以更新速度慢", 4)
+    
+    -- 创建选项卡
+    local InfoTab = Window:Tab({
+        Title = "信息",
+        Icon = "info",
+    })
+    
+    local HomeTab = Window:Tab({
+        Title = "主页",
+        Icon = "house",
+    })
+    
+    local ExclusiveTab = Window:Tab({
+        Title = "专属功能",
+        Icon = "crown",
+    })
+    
+    local UtilityTab = Window:Tab({
+        Title = "通用",
+        Icon = "settings",
+    })
+    
+    local ServerTab = Window:Tab({
+        Title = "选择服务器",
+        Icon = "server",
+    })
+    
+    local OtherScriptsTab = Window:Tab({
+        Title = "其他脚本",
+        Icon = "diamond",
+    })
+    
+    local ThemeTab = Window:Tab({
+        Title = "主题设置",
+        Icon = "palette",
+    })
+    
+    -- ====== 主页选项卡内容 ======
+    HomeTab:Section({
+        Title = "联系与加入",
+    })
+    
+    HomeTab:Button({
+        Title = "复制作者QQ号",
+        Callback = function()
+            copyToClipboard("1901671661")
+        end,
+    })
+    
+    HomeTab:Button({
+        Title = "复制QQ群聊",
+        Callback = function()
+            copyToClipboard("445825485")
+        end,
+    })
+    
+    HomeTab:Button({
+        Title = "加入军团",
+        Callback = function()
+            copyToClipboard("377108392")
+        end,
+    })
+    
+    -- ====== 信息选项卡内容 ======
+    InfoTab:Section({
+        Title = "脚本公告",
+    })
+    
+    InfoTab:Button({
+        Title = "📢 点击查看脚本公告",
+        Callback = function()
+            Loaded_Main_Lua:Notify({
+                Title = "📢 脚本公告 - 军团联合训练战",
+                Content = "自今日起，【星夜海】军团与【墨龙 凌霄】军团约定，待手游正式上线后，将联合开启专属【友军训练战】，以战会友、切磋共进。",
+                Duration = 8,
+                Position = "Center",
+                Icon = "megaphone",
+                Color = Color3.fromRGB(255, 165, 0),
+                CloseAnimation = "FadeOut",
+                OpenAnimation = "FadeIn"
+            })
+            wait(2)
+            Loaded_Main_Lua:Notify({
+                Title = "📋 训练战规则说明",
+                Content = "本次训练战定于手游上线后的第六周正式开启，赛事全程恪守专属规则与注意事项：\n• 参赛人员限定为远古龙战力持有者\n• 战斗中复活所需费用，由双方军团共同承担\n• 对战全程禁用所有技能，仅可使用普通咬击进行对抗\n• 坚守『友谊第一，比赛第二』的核心原则",
+                Duration = 12,
+                Position = "Center",
+                Icon = "clipboard-list",
+                Color = Color3.fromRGB(30, 144, 255),
+                CloseAnimation = "SlideOut",
+                OpenAnimation = "SlideIn"
+            })
+            wait(3)
+            Loaded_Main_Lua:Notify({
+                Title = "🏆 赛程安排 & 奖励",
+                Content = "赛事共分三轮依次开展：\n\n【第一轮】军团普通成员对决\n• 双方各派出一名成员进行1V1单挑\n• 存活方即为该局胜者\n\n【第二轮】各分队队长交锋\n• 待所有普通成员完成对战后进行\n• 双方各分队队长接续进行1V1单挑\n• 规则与首轮一致\n\n【第三轮】军团核心战力对决\n• 双方军团的团长与副团长组队配合\n• 展开团副联合作战的对抗比拼\n• 最终取胜的军团将独揽6666龙币的专属奖励",
+                Duration = 15,
+                Position = "Center",
+                Icon = "trophy",
+                Color = Color3.fromRGB(255, 215, 0),
+                CloseAnimation = "ScaleOut",
+                OpenAnimation = "ScaleIn"
+            })
+        end,
+    })
+    
+    InfoTab:Section({
+        Title = "聊天系统",
+    })
+    
+    InfoTab:Button({
+        Title = "💬 打开全局聊天",
+        Callback = function()
+            if not ChatSystem.chatWindow then
+                ChatSystem:CreateChatGUI()
+            end
+            ChatSystem:ToggleChat()
+        end,
+    })
+    
+    InfoTab:Section({
+        Title = "快捷功能",
+    })
+    
+    InfoTab:Button({
+        Title = "欢迎回家",
+        Callback = function()
+            Loaded_Main_Lua:Notify({
+                Title = "欢迎回家",
+                Content = string.format("用户名: %s\n职位: %s%s", 
+                    currentUsername, 
+                    specialMark, 
+                    userPosition
+                ),
+                Duration = 6,
+                Position = "BottomRight",
+                Icon = "user-check",
+                Color = Color3.fromRGB(50, 205, 50),
+                CloseAnimation = "FadeOut",
+                OpenAnimation = "FadeIn"
+            })
+        end,
+    })
+    
+    InfoTab:Button({
+        Title = "关于Atrumix",
+        Callback = function()
+            showAdvancedNotification(
+                "关于 Atrumix",
+                "欢迎 " .. currentUsername .. " 使用Atrumix脚本\n\n" ..
+                "职位: " .. userPosition .. "\n\n" ..
+                "作者：南烛\n\n" ..
+                "脚本由我一人制作，所以更新速度慢\n\n" ..
+                "仅限墨龙‖凌霄军团成员使用\n\n" ..
+                "感谢您的使用与支持！",
+                10
+            )
+        end,
+    })
+    
+    InfoTab:Button({
+        Title = "显示帮助",
+        Callback = function()
+            showAdvancedNotification(
+                "使用帮助",
+                "1. 选择对应游戏后点击按钮加载脚本\n" ..
+                "2. 使用【自动检测并执行】可自动检测游戏\n" ..
+                "3. 其他脚本为别人制作\n" ..
+                "4. 您有权限修改主题颜色和边框样式\n" ..
+                "5. 如有问题请联系作者🐧：1901671661",
+                8
+            )
+        end,
+    })
+    
+    InfoTab:Button({
+        Title = "显示用户信息",
+        Callback = function()
+            showAdvancedNotification(
+                "用户信息",
+                "用户名: " .. currentUsername .. "\n" ..
+                "职位: " .. userPosition .. "\n" ..
+                "用户ID: " .. game.Players.LocalPlayer.UserId .. "\n" ..
+                "账户年龄: " .. game.Players.LocalPlayer.AccountAge .. " 天",
+                8
+            )
+        end,
+    })
+    
+    InfoTab:Button({
+        Title = "显示游戏信息",
+        Callback = function()
+            local currentGameId = game.PlaceId
+            local success, gameInfo = pcall(function()
+                return game:GetService("MarketplaceService"):GetProductInfo(currentGameId)
+            end)
+            
+            local gameName = success and gameInfo.Name or "未知游戏"
+            
+            showAdvancedNotification(
+                "当前游戏信息",
+                "游戏名称: " .. gameName .. "\n" ..
+                "游戏ID: " .. currentGameId .. "\n" ..
+                "服务器ID: " .. game.JobId .. "\n" ..
+                "玩家数量: " .. #game.Players:GetPlayers(),
+                8
+            )
+        end,
+    })
+    
+    -- ====== 专属功能选项卡内容 ======
+    ExclusiveTab:Section({
+        Title = "👑 管理功能",
+    })
+    
+    -- 获取使用脚本的玩家列表
+    local scriptUsers = detectScriptUsers()
+    
+    local userDropdown = ExclusiveTab:Dropdown({
+        Title = "选择要踢出的玩家",
+        Multi = false,
+        AllowNone = true,
+        Values = scriptUsers,
+        Callback = function(selectedUser)
+            -- 保存选中的用户
+            _G.selectedUserToKick = selectedUser
+        end,
+    })
+    
+    ExclusiveTab:Button({
+        Title = "⛔ 立即踢出选中玩家",
+        Callback = function()
+            local targetUser = _G.selectedUserToKick
+            if not targetUser then
+                Loaded_Main_Lua:Notify({
+                    Title = "操作失败",
+                    Content = "请先选择一个玩家",
+                    Duration = 3,
+                    Icon = "x-circle",
+                    Color = Color3.fromRGB(239, 68, 68)
+                })
+                return
+            end
+            
+            if targetUser == currentUsername then
+                Loaded_Main_Lua:Notify({
+                    Title = "操作失败",
+                    Content = "不能踢出自己",
+                    Duration = 3,
+                    Icon = "x-circle",
+                    Color = Color3.fromRGB(239, 68, 68)
+                })
+                return
+            end
+            
+            local success = kickPlayer(targetUser)
+            if success then
+                Loaded_Main_Lua:Notify({
+                    Title = "操作成功",
+                    Content = "已踢出玩家: " .. targetUser,
+                    Duration = 3,
+                    Icon = "check-circle",
+                    Color = Color3.fromRGB(34, 197, 94)
+                })
+                
+                -- 从下拉框中移除
+                local newUsers = {}
+                for _, user in ipairs(scriptUsers) do
+                    if user ~= targetUser then
+                        table.insert(newUsers, user)
+                    end
+                end
+                scriptUsers = newUsers
+                userDropdown:Refresh(scriptUsers)
+            else
+                Loaded_Main_Lua:Notify({
+                    Title = "操作失败",
+                    Content = "踢出玩家失败",
+                    Duration = 3,
+                    Icon = "x-circle",
+                    Color = Color3.fromRGB(239, 68, 68)
+                })
+            end
+        end,
+    })
+    
+    ExclusiveTab:Button({
+        Title = "🔄 刷新玩家列表",
+        Callback = function()
+            scriptUsers = detectScriptUsers()
+            userDropdown:Refresh(scriptUsers)
+            
+            Loaded_Main_Lua:Notify({
+                Title = "刷新成功",
+                Content = "已刷新玩家列表，共 " .. #scriptUsers .. " 人",
+                Duration = 2,
+                Icon = "refresh-cw",
+                Color = Color3.fromRGB(34, 197, 94)
+            })
+        end,
+    })
+    
+    -- ====== 通用选项卡内容 ======
+    UtilityTab:Section({
+        Title = "服务器功能",
+    })
+    
+    UtilityTab:Button({
+        Title = "重新进入服务器",
+        Callback = function()
+            local LocalPlayer = game.Players.LocalPlayer
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+        end,
+    })
+    
+    UtilityTab:Section({
+        Title = "脚本功能",
+    })
+    
+    UtilityTab:Button({
+        Title = "飞行v3",
+        Callback = function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/d320a26c34e6d73048a3e0ba466088bf79f83430/%E9%A3%9E%E8%A1%8C'))()
+        end,
+    })
+    
+    UtilityTab:Section({
+        Title = "系统功能",
+    })
+    
+    UtilityTab:Button({
+        Title = "刷新界面",
+        Callback = function()
+            game:GetService("CoreGui"):ClearAllChildren()
+            Loaded_Main_Lua:Notify({
+                Title = "界面已刷新",
+                Content = "正在重新加载界面...",
+                Duration = 3,
+                Icon = "refresh-cw"
+            })
+            wait(1)
+            createAtrumixUI()
+        end,
+    })
+    
+    -- ====== 选择服务器选项卡内容 ======
+    ServerTab:Section({
+        Title = "自动检测",
+    })
+    
+    ServerTab:Button({
+        Title = "🚀 自动检测并执行",
+        Callback = function()
+            Loaded_Main_Lua:Notify({
+                Title = "正在检测游戏",
+                Content = "正在检测当前游戏并执行对应脚本...",
+                Duration = 3,
+                Icon = "search",
+                Color = Color3.fromRGB(59, 130, 246)
+            })
+            autoDetectAndExecute()
+        end,
+    })
+    
+    ServerTab:Section({
+        Title = "游戏脚本",
+    })
+    
+    ServerTab:Button({
+        Title = "元素力量大亨",
+        Callback = function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/042524fac05940b1b1a9389a0bbb9572441b1bc3/%E5%85%83%E7%B4%A0%E5%8A%9B%E9%87%8F%E5%A4%A7%E4%BA%A8'))()
+        end,
+    })
+    
+    ServerTab:Button({
+        Title = "99夜",
+        Callback = function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/cca264ca9a72738d7d0f51b3e5bd31a764e9d0ec/99%E5%A4%9C'))()
+        end,
+    })
+    
+    ServerTab:Button({
+        Title = "鱼",
+        Callback = function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/881626be7e7cc72ac677c9cf375f3cb8c794eb55/%E9%B1%BC'))()
+        end,
+    })
+    
+    ServerTab:Button({
+        Title = "刀刃球",
+        Callback = function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/b71ce91c007fd0cc5e3866c8c13ef8ee13ac17a9/%E5%88%80%E5%88%83%E7%90%83'))()
+        end,
+    })
+    
+    ServerTab:Button({
+        Title = "种植花园",
+        Callback = function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/045a07f1bbe87ad4d96f2ba8f2ab015db004bf20/%E7%A7%8D%E6%A4%8D%E8%8A%B1%E5%9B%AD'))()
+        end,
+    })
+    
+    ServerTab:Button({
+        Title = "凹凸世界",
+        Callback = function()
+            local success, errorMsg = pcall(function()
+                local content = game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E5%87%B9%E5%87%B8%E4%B8%96%E7%95%8C.lua')
+                if content and #content > 0 then
+                    local func = loadstring(content)
+                    if func then
+                        func()
+                    else
+                        error("脚本编译失败")
+                    end
+                else
+                    error("获取的脚本内容为空")
+                end
+            end)
+            
+            if success then
+                Loaded_Main_Lua:Notify({
+                    Title = "凹凸世界",
+                    Content = "脚本加载成功！",
+                    Duration = 3,
+                    Icon = "check",
+                    Color = Color3.fromRGB(34, 197, 94)
+                })
+            else
+                local backupSuccess, backupError = pcall(function()
+                    local backupContent = game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E5%87%B9%E5%87%B8%E4%B8%96%E7%95%8C')
+                    if backupContent and #backupContent > 0 then
+                        local backupFunc = loadstring(backupContent)
+                        if backupFunc then
+                            backupFunc()
+                        else
+                            error("备用脚本编译失败")
+                        end
+                    else
+                        error("获取的备用脚本内容为空")
+                    end
+                end)
+                
+                if backupSuccess then
+                    Loaded_Main_Lua:Notify({
+                        Title = "凹凸世界",
+                        Content = "脚本加载成功！（备用链接）",
+                        Duration = 3,
+                        Icon = "check",
+                        Color = Color3.fromRGB(34, 197, 94)
+                    })
+                else
+                    Loaded_Main_Lua:Notify({
+                        Title = "凹凸世界",
+                        Content = "脚本加载失败，请检查网络或联系作者",
+                        Duration = 3,
+                        Icon = "x-circle",
+                        Color = Color3.fromRGB(239, 68, 68)
+                    })
+                end
+            end
+        end,
+    })
+    
+    -- ====== 其他脚本选项卡内容 ======
+    OtherScriptsTab:Section({
+        Title = "第三方脚本",
+    })
+    
+    OtherScriptsTab:Button({
+        Title = "皮脚本",
+        Callback = function()
+            getgenv().XiaoPi = "皮脚本QQ群1059336697"
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/xiaopi77/xiaopi77/main/QQ1002100032-Roblox-Pi-script.lua"))()
+        end,
+    })
+    
+    OtherScriptsTab:Button({
+        Title = "TX退休",
+        Callback = function()
+            TX = "脚本群:160369111"
+            Script = "Free永久免费"
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/JsYb666/TX-Free-YYDS/refs/heads/main/FREE-TX-TEAM"))()
+        end,
+    })
+    
+    OtherScriptsTab:Button({
+        Title = "SN脚本",
+        Callback = function()
+            loadstring("\108\111\97\100\115\116\114\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\40\34\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\120\105\97\110\105\110\103\49\53\49\47\83\78\72\85\66\47\109\97\105\110\47\83\78\104\117\98\46\108\117\97\34\41\41\40\41")()
+        end,
+    })
+    
+    OtherScriptsTab:Button({
+        Title = "叶脚本",
+        Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/roblox-ye/QQ515966991/refs/heads/main/ROBLOX-CNVIP-XIAOYE.lua"))()
+        end,
+    })
+    
+    OtherScriptsTab:Button({
+        Title = "秋蓉",
+        Callback = function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E6%A6%95%E6%A0%91'))()
+        end,
+    })
+    
+    -- ====== 主题设置选项卡内容 ======
+    ThemeTab:Section({
+        Title = "🎨 预设颜色主题",
+        Description = "从下方选择预设的颜色主题"
+    })
+    
+    -- 预设颜色主题下拉框
+    local colorThemeDropdown = ThemeTab:Dropdown({
+        Title = "选择预设主题",
+        Multi = false,
+        AllowNone = false,
+        Values = colorThemeNames,
+        Callback = function(selectedTheme)
+            local theme = colorThemes[selectedTheme]
+            if theme then
+                accentColor = theme.Accent
+                outlineColor = theme.Outline
+                textColor = theme.Text
+                placeholderTextColor = theme.Placeholder
+                currentThemeName = selectedTheme
+                
+                -- 更新颜色选择器
+                if accentPicker and accentPicker.SetValue then
+                    local success, color = pcall(function() return Color3.fromHex(accentColor) end)
+                    if success then
+                        accentPicker:SetValue(color)
+                    end
+                end
+                if outlinePicker and outlinePicker.SetValue then
+                    local success, color = pcall(function() return Color3.fromHex(outlineColor) end)
+                    if success then
+                        outlinePicker:SetValue(color)
+                    end
+                end
+                if textPicker and textPicker.SetValue then
+                    local success, color = pcall(function() return Color3.fromHex(textColor) end)
+                    if success then
+                        textPicker:SetValue(color)
+                    end
+                end
+                if placeholderPicker and placeholderPicker.SetValue then
+                    local success, color = pcall(function() return Color3.fromHex(placeholderTextColor) end)
+                    if success then
+                        placeholderPicker:SetValue(color)
+                    end
+                end
+                
+                Loaded_Main_Lua:Notify({
+                    Title = "已选择主题",
+                    Content = selectedTheme .. "\n" .. theme.Description,
+                    Duration = 3,
+                    Icon = "check-circle",
+                    Color = Color3.fromRGB(34, 197, 94)
+                })
+            end
+        end,
+    })
+    
+    -- 设置默认选中的主题
+    for _, name in ipairs(colorThemeNames) do
+        if name == currentThemeName then
+            colorThemeDropdown:Select(currentThemeName)
+            break
+        end
+    end
+    
+    ThemeTab:Section({
+        Title = "🎯 自定义颜色微调",
+        Description = "通过颜色选择器微调各个颜色"
+    })
+    
+    -- 背景颜色选择器（强调色）
+    local accentPicker = ThemeTab:Colorpicker({
+        Title = "背景颜色（强调色）",
+        Default = (function()
+            local success, result = pcall(function() return Color3.fromHex(accentColor) end)
+            return success and result or Color3.fromHex("#1e88e5")
+        end)(),
+        Callback = function(color)
+            accentColor = color:ToHex()
+            if currentThemeName ~= "🎨 自定义" then
+                currentThemeName = "🎨 自定义"
+                colorThemeDropdown:Select("🎨 自定义")
+            end
+        end,
+    })
+    
+    -- 边框颜色选择器
+    local outlinePicker = ThemeTab:Colorpicker({
+        Title = "边框颜色",
+        Default = (function()
+            local success, result = pcall(function() return Color3.fromHex(outlineColor) end)
+            return success and result or Color3.fromHex("#ffffff")
+        end)(),
+        Callback = function(color)
+            outlineColor = color:ToHex()
+            if currentThemeName ~= "🎨 自定义" then
+                currentThemeName = "🎨 自定义"
+                colorThemeDropdown:Select("🎨 自定义")
+            end
+        end,
+    })
+    
+    -- 文本颜色选择器
+    local textPicker = ThemeTab:Colorpicker({
+        Title = "文本颜色",
+        Default = (function()
+            local success, result = pcall(function() return Color3.fromHex(textColor) end)
+            return success and result or Color3.fromHex("#ffffff")
+        end)(),
+        Callback = function(color)
+            textColor = color:ToHex()
+            if currentThemeName ~= "🎨 自定义" then
+                currentThemeName = "🎨 自定义"
+                colorThemeDropdown:Select("🎨 自定义")
+            end
+        end,
+    })
+    
+    -- 输入框占位文本颜色选择器
+    local placeholderPicker = ThemeTab:Colorpicker({
+        Title = "输入框文本颜色",
+        Default = (function()
+            local success, result = pcall(function() return Color3.fromHex(placeholderTextColor) end)
+            return success and result or Color3.fromHex("#808080")
+        end)(),
+        Callback = function(color)
+            placeholderTextColor = color:ToHex()
+            if currentThemeName ~= "🎨 自定义" then
+                currentThemeName = "🎨 自定义"
+                colorThemeDropdown:Select("🎨 自定义")
+            end
+        end,
+    })
+    
+    ThemeTab:Section({
+        Title = "边框配置♞",
+        Description = "选择边框样式和速度"
+    })
+    
+    -- 边框样式下拉框
+    local borderStyleDropdown = ThemeTab:Dropdown({
+        Title = "选择边框样式",
+        Multi = false,
+        AllowNone = false,
+        Values = borderStyleNames,
+        Callback = function(selectedStyle)
+            borderStyle = selectedStyle
+            
+            -- 显示样式描述
+            local styleData = borderStyles[selectedStyle]
+            if styleData then
+                Loaded_Main_Lua:Notify({
+                    Title = "已选择边框样式",
+                    Content = selectedStyle .. "\n" .. styleData.description,
+                    Duration = 3,
+                    Icon = "sparkles",
+                    Color = Color3.fromRGB(147, 51, 234)
+                })
+            end
+        end,
+    })
+    
+    -- 设置默认选中的边框样式
+    borderStyleDropdown:Select(borderStyle)
+    
+    -- 边框速度滑块
+    ThemeTab:Slider({
+        Title = "边框变化速度",
+        Min = 0.2,
+        Max = 3.0,
+        Default = borderSpeed,
+        Decimals = 1,
+        Callback = function(value)
+            borderSpeed = value
+        end,
+    })
+    
+    ThemeTab:Section({
+        Title = "💾 主题操作",
+    })
+    
+    -- 应用主题按钮
+    ThemeTab:Button({
+        Title = "✅ 应用主题",
+        Callback = function()
+            -- 更新主题
+            local customTheme = {
+                Name = currentThemeName,
+                Accent = accentColor,
+                Outline = outlineColor,
+                Text = textColor,
+                PlaceholderText = placeholderTextColor,
+            }
+            
+            pcall(function()
+                Loaded_Main_Lua:AddTheme(customTheme)
+                Loaded_Main_Lua:SetTheme(currentThemeName)
+            end)
+            
+            -- 更新边框
+            local windowFrame = Window:GetWindowFrame()
+            if windowFrame then
+                -- 移除旧的边框连接
+                if _G.borderConnection then
+                    _G.borderConnection:Disconnect()
+                end
+                _G.borderConnection = createDynamicBorder(windowFrame, borderStyle, borderSpeed)
+            end
+            
+            -- 保存设置
+            saveUserThemeSettings()
+            
+            Loaded_Main_Lua:Notify({
+                Title = "主题已更新",
+                Content = "当前主题: " .. currentThemeName .. "\n边框样式: " .. borderStyle,
+                Icon = "palette",
+                Duration = 3,
+            })
+        end,
+    })
+    
+    -- 重置为默认主题按钮
+    ThemeTab:Button({
+        Title = "🔄 重置为默认主题",
+        Callback = function()
+            accentColor = "#1e88e5"
+            outlineColor = "#ffffff"
+            textColor = "#ffffff"
+            placeholderTextColor = "#808080"
+            currentThemeName = "🔵 蓝色 (默认)"
+            borderStyle = "⚡ 动态彩虹"
+            borderSpeed = 1.0
+            
+            colorThemeDropdown:Select("🔵 蓝色 (默认)")
+            borderStyleDropdown:Select("⚡ 动态彩虹")
+            
+            if accentPicker and accentPicker.SetValue then
+                accentPicker:SetValue(Color3.fromHex("#1e88e5"))
+            end
+            if outlinePicker and outlinePicker.SetValue then
+                outlinePicker:SetValue(Color3.fromHex("#ffffff"))
+            end
+            if textPicker and textPicker.SetValue then
+                textPicker:SetValue(Color3.fromHex("#ffffff"))
+            end
+            if placeholderPicker and placeholderPicker.SetValue then
+                placeholderPicker:SetValue(Color3.fromHex("#808080"))
+            end
+            
+            -- 应用主题
+            local customTheme = {
+                Name = currentThemeName,
+                Accent = accentColor,
+                Outline = outlineColor,
+                Text = textColor,
+                PlaceholderText = placeholderTextColor,
+            }
+            
+            pcall(function()
+                Loaded_Main_Lua:AddTheme(customTheme)
+                Loaded_Main_Lua:SetTheme(currentThemeName)
+            end)
+            
+            -- 更新边框
+            local windowFrame = Window:GetWindowFrame()
+            if windowFrame then
+                if _G.borderConnection then
+                    _G.borderConnection:Disconnect()
+                end
+                _G.borderConnection = createDynamicBorder(windowFrame, borderStyle, borderSpeed)
+            end
+            
+            -- 保存设置
+            saveUserThemeSettings()
+            
+            Loaded_Main_Lua:Notify({
+                Title = "已重置为默认主题",
+                Content = "主题已恢复默认设置",
+                Duration = 3,
+                Icon = "check-circle",
+                Color = Color3.fromRGB(34, 197, 94)
+            })
+        end,
+    })
+    
+    -- 当前主题信息显示
+    ThemeTab:Section({
+        Title = "ℹ️ 当前主题信息",
+    })
+    
+    ThemeTab:Label({
+        Title = "当前主题: " .. currentThemeName,
+    })
+    
+    ThemeTab:Label({
+        Title = "边框样式: " .. borderStyle,
+    })
+    
+    ThemeTab:Label({
+        Title = "强调色: " .. accentColor,
+    })
+    
+    ThemeTab:Label({
+        Title = "边框色: " .. outlineColor,
+    })
+    
+    ThemeTab:Label({
+        Title = "文本色: " .. textColor,
+    })
+    
+    return Window
+end
+
+-- ====== 程序退出时保存当前设置 ======
+game.Players.LocalPlayer.OnTeleport:Connect(function()
+    saveUserThemeSettings()
+    if ChatSystem.chatWindow then
+        ChatSystem:Destroy()
+    end
+end)
+
+-- 定期自动保存主题设置（每5分钟）
+spawn(function()
+    while wait(300) do
+        saveUserThemeSettings()
+    end
+end)
+
+-- 显示确认弹窗
+Loaded_Main_Lua:Popup({
+    Title = "Atrumix 脚本确认",
+    IconThemed = true,
+    Content = "欢迎 " .. game.Players.LocalPlayer.Name .. " 使用Atrumix脚本\n\n" ..
+             "职位: " .. getUserPosition(currentUsername) .. "\n\n" ..
+             "主题自定义: ✅ 已授权（共" .. #colorThemeNames .. "种预设）\n" ..
+             "边框样式: ✅ 已授权（共" .. #borderStyleNames .. "种样式）\n\n" ..
+             "仅限墨龙‖凌霄军团成员使用",
+    Buttons = {
+        {
+            Title = "取消",
+            Callback = function() 
+                print("用户取消了脚本执行")
+                Loaded_Main_Lua:Notify({
+                    Title = "已取消",
+                    Content = "脚本执行已被取消",
+                    Duration = 3,
+                    Icon = "info-circle"
+                })
+            end,
+            Variant = "Secondary",
+        },
+        {
+            Title = "执行",
+            Icon = "arrow-right",
+            Callback = function() 
+                -- 创建右上角北京时间显示
+                createBeijingTimeDisplay()
+                
+                -- 显示创建成功通知
+                Loaded_Main_Lua:Notify({
+                    Title = "已启用北京时间显示",
+                    Content = "已在屏幕右上角显示北京时间\n时间每秒钟更新一次",
+                    Duration = 5,
+                    Position = "TopCenter",
+                    Icon = "clock",
+                    Color = Color3.fromRGB(0, 150, 255)
+                })
+                
+                -- 调用主UI创建函数
+                createAtrumixUI()
+                
+                -- 显示主题信息
+                Loaded_Main_Lua:Notify({
+                    Title = "主题加载完成",
+                    Content = "当前主题: " .. currentThemeName .. "\n边框样式: " .. borderStyle,
+                    Duration = 4,
+                    Position = "TopCenter",
+                    Icon = "palette",
+                    Color = Color3.fromRGB(147, 51, 234)
+                })
+            end,
+            Variant = "Primary",
+        }
+    }
+})
