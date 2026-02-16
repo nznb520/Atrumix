@@ -240,6 +240,13 @@ local colorThemes = {
     }
 }
 
+-- 生成颜色主题列表（用于下拉框）
+local colorThemeNames = {}
+for name, _ in pairs(colorThemes) do
+    table.insert(colorThemeNames, name)
+end
+table.sort(colorThemeNames)
+
 -- ====== 边框样式配置 ======
 local borderStyles = {
     ["⚡ 动态彩虹"] = {
@@ -347,11 +354,11 @@ local ChatSystem = {
     chatWindow = nil,
     messages = {},
     maxMessages = 20,
-    listeners = {},
     messageBox = nil,
     inputBox = nil,
     toggleButton = nil,
-    updateConnection = nil
+    updateConnection = nil,
+    screenGui = nil
 }
 
 -- 创建聊天GUI
@@ -627,7 +634,7 @@ function ChatSystem:BroadcastMessage(message)
     -- 使用BindableEvent在脚本实例间通信
     if not self.bindableEvent then
         self.bindableEvent = Instance.new("BindableEvent")
-        self.bindableEvent.Name = "ChatBroadcast"
+        self.bindableEvent.Name = "ChatBroadcast_" .. currentUsername
         self.bindableEvent.Parent = game:GetService("CoreGui")
     end
     
@@ -640,29 +647,20 @@ function ChatSystem:StartReceiving()
         self.updateConnection:Disconnect()
     end
     
-    -- 创建接收事件
-    if not self.receiveEvent then
-        self.receiveEvent = Instance.new("BindableEvent")
-        self.receiveEvent.Name = "ChatReceive"
-        self.receiveEvent.Parent = game:GetService("CoreGui")
-    end
-    
-    -- 监听广播
-    local broadcastEvent = game:GetService("CoreGui"):FindFirstChild("ChatBroadcast")
-    if broadcastEvent then
-        self.updateConnection = broadcastEvent.Event:Connect(function(message)
-            -- 避免接收自己发送的消息
-            if not message:find(currentUsername .. ":") then
-                self:ReceiveMessage(message)
-            end
-        end)
-    end
+    -- 监听所有广播
+    local coreGui = game:GetService("CoreGui")
     
     -- 每秒检查一次新消息
-    spawn(function()
-        while self.chatWindow and self.chatWindow.Parent do
-            task.wait(1)
-            -- 可以在这里添加从服务器获取消息的逻辑
+    self.updateConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        -- 查找其他玩家的广播事件
+        for _, obj in ipairs(coreGui:GetChildren()) do
+            if obj.Name and obj.Name:find("ChatBroadcast_") and obj.Name ~= "ChatBroadcast_" .. currentUsername then
+                if not self.listeners[obj.Name] then
+                    self.listeners[obj.Name] = obj.Event:Connect(function(message)
+                        self:ReceiveMessage(message)
+                    end)
+                end
+            end
         end
     end)
 end
@@ -671,6 +669,9 @@ end
 function ChatSystem:Destroy()
     if self.updateConnection then
         self.updateConnection:Disconnect()
+    end
+    for _, conn in pairs(self.listeners) do
+        conn:Disconnect()
     end
     if self.screenGui then
         self.screenGui:Destroy()
@@ -688,14 +689,19 @@ local function detectScriptUsers()
     
     -- 通过BindableEvent检测
     local coreGui = game:GetService("CoreGui")
-    local chatBroadcast = coreGui:FindFirstChild("ChatBroadcast")
-    local chatReceive = coreGui:FindFirstChild("ChatReceive")
     
-    if chatBroadcast or chatReceive then
-        -- 如果存在这些事件，说明有脚本在运行
-        for _, player in ipairs(game.Players:GetPlayers()) do
-            table.insert(users, player.Name)
+    for _, obj in ipairs(coreGui:GetChildren()) do
+        if obj.Name and obj.Name:find("ChatBroadcast_") then
+            local userName = obj.Name:gsub("ChatBroadcast_", "")
+            if userName ~= currentUsername then
+                table.insert(users, userName)
+            end
         end
+    end
+    
+    -- 如果没有检测到其他用户，至少显示自己
+    if #users == 0 then
+        table.insert(users, currentUsername)
     end
     
     return users
@@ -704,30 +710,27 @@ end
 -- ====== 踢出玩家函数 ======
 local function kickPlayer(playerName)
     local player = game.Players:FindFirstChild(playerName)
-    if player then
+    if player and player.Name ~= currentUsername then
         -- 尝试通过多种方式踢出
-        pcall(function()
+        local success, err = pcall(function()
             player:Kick("您已被管理员踢出")
         end)
         
-        -- 如果上面方法失败，尝试其他方法
-        pcall(function()
-            local message = Instance.new("Message")
-            message.Parent = game.Workspace
-            message.Text = playerName .. " 已被踢出"
-            game:GetService("Debris"):AddItem(message, 3)
-        end)
-        
-        return true
+        return success
     end
     return false
 end
 
 -- ====== 创建动态边框 ======
+local borderConnection = nil
+
 local function createDynamicBorder(frame, style, speed)
-    if not frame then return end
+    if not frame then return nil end
     
-    local borderConnection
+    if borderConnection then
+        borderConnection:Disconnect()
+    end
+    
     local hue = 0
     local colorIndex = 1
     
@@ -735,6 +738,7 @@ local function createDynamicBorder(frame, style, speed)
         if not frame or not frame.Parent then
             if borderConnection then
                 borderConnection:Disconnect()
+                borderConnection = nil
             end
             return
         end
@@ -742,25 +746,12 @@ local function createDynamicBorder(frame, style, speed)
         local styleData = borderStyles[style]
         if not styleData then return end
         
+        local newColor
+        
         if styleData.type == "rainbow" then
             -- 彩虹渐变
             hue = (hue + (0.01 * speed)) % 1
-            local color = Color3.fromHSV(hue, 1, 1)
-            
-            -- 更新边框颜色
-            local stroke = frame:FindFirstChildOfClass("UIStroke")
-            if stroke then
-                stroke.Color = color
-            end
-            
-            -- 更新打开按钮边框
-            local openButton = Loaded_Main_Lua:GetOpenButton()
-            if openButton then
-                local btnStroke = openButton:FindFirstChildOfClass("UIStroke")
-                if btnStroke then
-                    btnStroke.Color = color
-                end
-            end
+            newColor = Color3.fromHSV(hue, 1, 1)
             
         elseif styleData.type == "gradient" then
             -- 渐变循环
@@ -783,36 +774,27 @@ local function createDynamicBorder(frame, style, speed)
             local g = color1.G + (color2.G - color1.G) * progress
             local b = color1.B + (color2.B - color1.B) * progress
             
-            local stroke = frame:FindFirstChildOfClass("UIStroke")
-            if stroke then
-                stroke.Color = Color3.new(r, g, b)
-            end
-            
-            -- 更新打开按钮
-            local openButton = Loaded_Main_Lua:GetOpenButton()
-            if openButton then
-                local btnStroke = openButton:FindFirstChildOfClass("UIStroke")
-                if btnStroke then
-                    btnStroke.Color = Color3.new(r, g, b)
-                end
-            end
+            newColor = Color3.new(r, g, b)
             
         elseif styleData.type == "random" then
             -- 随机颜色
             local randomIndex = math.random(1, #styleData.colors)
-            local color = Color3.fromHex(styleData.colors[randomIndex])
-            
+            newColor = Color3.fromHex(styleData.colors[randomIndex])
+        end
+        
+        if newColor then
+            -- 更新主窗口边框
             local stroke = frame:FindFirstChildOfClass("UIStroke")
             if stroke then
-                stroke.Color = color
+                stroke.Color = newColor
             end
             
             -- 更新打开按钮
-            local openButton = Loaded_Main_Lua:GetOpenButton()
+            local openButton = Loaded_Main_Lua and Loaded_Main_Lua:GetOpenButton()
             if openButton then
                 local btnStroke = openButton:FindFirstChildOfClass("UIStroke")
                 if btnStroke then
-                    btnStroke.Color = color
+                    btnStroke.Color = newColor
                 end
             end
         end
@@ -820,7 +802,6 @@ local function createDynamicBorder(frame, style, speed)
     
     -- 创建连接
     borderConnection = game:GetService("RunService").Heartbeat:Connect(updateBorder)
-    
     return borderConnection
 end
 
@@ -838,48 +819,28 @@ local function saveUserThemeSettings()
     })
 end
 
--- ====== 更新主题 ======
-local function updateTheme(borderConnection)
-    -- 创建自定义主题
-    local customTheme = {
-        Name = currentThemeName,
-        Accent = accentColor,
-        Outline = outlineColor,
-        Text = textColor,
-        PlaceholderText = placeholderTextColor,
-    }
-    
-    -- 添加到WindUI主题系统
-    local success = pcall(function()
-        Loaded_Main_Lua:AddTheme(customTheme)
-        Loaded_Main_Lua:SetTheme(currentThemeName)
-    end)
-    
-    if success then
-        -- 保存主题设置
-        saveUserThemeSettings()
+-- ====== 应用颜色主题 ======
+local function applyColorTheme(themeName)
+    local theme = colorThemes[themeName]
+    if theme then
+        accentColor = theme.Accent
+        outlineColor = theme.Outline
+        textColor = theme.Text
+        placeholderTextColor = theme.Placeholder
+        currentThemeName = themeName
         
-        Loaded_Main_Lua:Notify({
-            Title = "主题已更新",
-            Content = "当前主题: " .. currentThemeName .. "\n边框样式: " .. borderStyle,
-            Icon = "palette",
-            Duration = 3,
-        })
+        return true
     end
+    return false
 end
 
 -- 如果不是军团成员，执行踢出操作
 if not isUserAllowed() then
-    Loaded_Main_Lua:Notify({
-        Title = "Atrumix - 访问被拒绝",
-        Content = "你不是军团成员\nYou're not a Legionnaire",
-        Duration = 5,
-        Position = "Center",
-        Icon = "ban",
-        Color = Color3.fromRGB(220, 20, 60)
-    })
-    wait(2)
-    game.Players.LocalPlayer:Kick("你不是军团成员 | You're not a Legionnaire")
+    wait(1)
+    local player = game.Players.LocalPlayer
+    if player then
+        player:Kick("你不是军团成员 | You're not a Legionnaire")
+    end
     return
 end
 
@@ -887,16 +848,18 @@ end
 
 -- 创建高级通知函数
 function showAdvancedNotification(title, description, duration)
-    Loaded_Main_Lua:Notify({
-        Title = title,
-        Content = description,
-        Duration = duration or 5,
-        Position = "BottomLeft",
-        CloseAnimation = "SlideOut",
-        OpenAnimation = "SlideIn",
-        Icon = "info-circle",
-        Color = Color3.fromRGB(80, 120, 200)
-    })
+    if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+        Loaded_Main_Lua:Notify({
+            Title = title,
+            Content = description,
+            Duration = duration or 5,
+            Position = "BottomLeft",
+            CloseAnimation = "SlideOut",
+            OpenAnimation = "SlideIn",
+            Icon = "info-circle",
+            Color = Color3.fromRGB(80, 120, 200)
+        })
+    end
 end
 
 -- 显示欢迎回家的通知
@@ -907,40 +870,29 @@ if currentUsername == "lingxiaoge6" then
     specialMark = "⭐ "
 end
 
-Loaded_Main_Lua:Notify({
-    Title = "欢迎回家",
-    Content = string.format("用户名: %s\n职位: %s%s", 
-        currentUsername, 
-        specialMark, 
-        userPosition
-    ),
-    Duration = 6,
-    Position = "BottomRight",
-    Icon = "user-check",
-    Color = Color3.fromRGB(50, 205, 50),
-    CloseAnimation = "FadeOut",
-    OpenAnimation = "FadeIn"
-})
-
 -- 复制到剪贴板函数
 local function copyToClipboard(text)
     if setclipboard then
         setclipboard(text)
-        Loaded_Main_Lua:Notify({
-            Title = "复制成功",
-            Content = "已复制到剪贴板: " .. text,
-            Duration = 3,
-            Icon = "copy",
-            Color = Color3.fromRGB(34, 197, 94)
-        })
+        if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+            Loaded_Main_Lua:Notify({
+                Title = "复制成功",
+                Content = "已复制到剪贴板: " .. text,
+                Duration = 3,
+                Icon = "copy",
+                Color = Color3.fromRGB(34, 197, 94)
+            })
+        end
     else
-        Loaded_Main_Lua:Notify({
-            Title = "复制失败",
-            Content = "当前环境不支持剪贴板功能",
-            Duration = 3,
-            Icon = "x-circle",
-            Color = Color3.fromRGB(239, 68, 68)
-        })
+        if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+            Loaded_Main_Lua:Notify({
+                Title = "复制失败",
+                Content = "当前环境不支持剪贴板功能",
+                Duration = 3,
+                Icon = "x-circle",
+                Color = Color3.fromRGB(239, 68, 68)
+            })
+        end
     end
 end
 
@@ -960,21 +912,25 @@ local function autoDetectAndExecute()
     local gameInfo = GameScripts[currentGameId]
     
     if gameInfo then
-        Loaded_Main_Lua:Notify({
-            Title = "检测到支持的游戏",
-            Content = string.format("游戏名称: %s\n游戏ID: %d", gameInfo[1], currentGameId),
-            Duration = 5,
-            Icon = "check-circle",
-            Color = Color3.fromRGB(34, 197, 94)
-        })
+        if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+            Loaded_Main_Lua:Notify({
+                Title = "检测到支持的游戏",
+                Content = string.format("游戏名称: %s\n游戏ID: %d", gameInfo[1], currentGameId),
+                Duration = 5,
+                Icon = "check-circle",
+                Color = Color3.fromRGB(34, 197, 94)
+            })
+        end
         wait(1)
-        Loaded_Main_Lua:Notify({
-            Title = "正在加载脚本",
-            Content = string.format("正在为【%s】加载脚本...", gameInfo[1]),
-            Duration = 3,
-            Icon = "download",
-            Color = Color3.fromRGB(59, 130, 246)
-        })
+        if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+            Loaded_Main_Lua:Notify({
+                Title = "正在加载脚本",
+                Content = string.format("正在为【%s】加载脚本...", gameInfo[1]),
+                Duration = 3,
+                Icon = "download",
+                Color = Color3.fromRGB(59, 130, 246)
+            })
+        end
         
         local success, errorMsg = pcall(function()
             local scriptContent = game:HttpGet(gameInfo[2])
@@ -991,55 +947,17 @@ local function autoDetectAndExecute()
         end)
         
         if success then
-            Loaded_Main_Lua:Notify({
-                Title = "脚本加载成功",
-                Content = string.format("【%s】脚本已成功加载！", gameInfo[1]),
-                Duration = 4,
-                Icon = "check",
-                Color = Color3.fromRGB(34, 197, 94)
-            })
-        else
-            if gameInfo[1] == "凹凸世界" then
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
                 Loaded_Main_Lua:Notify({
-                    Title = "尝试备用链接",
-                    Content = "正在尝试使用备用链接加载凹凸世界脚本...",
-                    Duration = 3,
-                    Icon = "refresh-cw",
-                    Color = Color3.fromRGB(255, 165, 0)
+                    Title = "脚本加载成功",
+                    Content = string.format("【%s】脚本已成功加载！", gameInfo[1]),
+                    Duration = 4,
+                    Icon = "check",
+                    Color = Color3.fromRGB(34, 197, 94)
                 })
-                
-                local backupSuccess, backupError = pcall(function()
-                    local backupContent = game:HttpGet("https://raw.githubusercontent.com/nznb520/Atrumix/main/%E5%87%B9%E5%87%B8%E4%B8%96%E7%95%8C")
-                    if backupContent and #backupContent > 0 then
-                        local loadBackupSuccess, loadBackupError = loadstring(backupContent)
-                        if loadBackupSuccess then
-                            loadBackupSuccess()
-                        else
-                            error("备用脚本编译失败: " .. tostring(loadBackupError))
-                        end
-                    else
-                        error("获取的备用脚本内容为空")
-                    end
-                end)
-                
-                if backupSuccess then
-                    Loaded_Main_Lua:Notify({
-                        Title = "脚本加载成功",
-                        Content = "【凹凸世界】脚本已通过备用链接成功加载！",
-                        Duration = 4,
-                        Icon = "check",
-                        Color = Color3.fromRGB(34, 197, 94)
-                    })
-                else
-                    Loaded_Main_Lua:Notify({
-                        Title = "脚本加载失败",
-                        Content = string.format("凹凸世界脚本加载失败\n错误: %s", tostring(errorMsg)),
-                        Duration = 5,
-                        Icon = "x-circle",
-                        Color = Color3.fromRGB(239, 68, 68)
-                    })
-                end
-            else
+            end
+        else
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
                 Loaded_Main_Lua:Notify({
                     Title = "脚本加载失败",
                     Content = string.format("加载失败: %s", tostring(errorMsg)),
@@ -1050,34 +968,15 @@ local function autoDetectAndExecute()
             end
         end
     else
-        Loaded_Main_Lua:Notify({
-            Title = "未检测到支持的游戏",
-            Content = string.format("当前游戏ID: %d\n此游戏暂无自动脚本", currentGameId),
-            Duration = 6,
-            Icon = "alert-circle",
-            Color = Color3.fromRGB(245, 158, 11)
-        })
-        wait(1)
-        
-        local supportedGames = ""
-        local count = 0
-        for gameId, info in pairs(GameScripts) do
-            count = count + 1
-            if count <= 5 then
-                supportedGames = supportedGames .. string.format("%d. %s\n", count, info[1])
-            end
+        if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+            Loaded_Main_Lua:Notify({
+                Title = "未检测到支持的游戏",
+                Content = string.format("当前游戏ID: %d\n此游戏暂无自动脚本", currentGameId),
+                Duration = 6,
+                Icon = "alert-circle",
+                Color = Color3.fromRGB(245, 158, 11)
+            })
         end
-        if count > 5 then
-            supportedGames = supportedGames .. string.format("... 等%d个游戏", count)
-        end
-        
-        Loaded_Main_Lua:Notify({
-            Title = "已支持的游戏",
-            Content = supportedGames,
-            Duration = 8,
-            Icon = "list",
-            Color = Color3.fromRGB(139, 92, 246)
-        })
     end
 end
 
@@ -1133,38 +1032,15 @@ local function createBeijingTimeDisplay()
     timeLabel.Font = Enum.Font.GothamBold
     timeLabel.Parent = mainFrame
     
-    local function updateGradient()
-        local hue = tick() % 10 / 10
-        local r, g, b
-        if hue < 1/6 then
-            r = 1; g = hue * 6; b = 0
-        elseif hue < 2/6 then
-            r = (2/6 - hue) * 6; g = 1; b = 0
-        elseif hue < 3/6 then
-            r = 0; g = 1; b = (hue - 2/6) * 6
-        elseif hue < 4/6 then
-            r = 0; g = (4/6 - hue) * 6; b = 1
-        elseif hue < 5/6 then
-            r = (hue - 4/6) * 6; g = 0; b = 1
-        else
-            r = 1; g = 0; b = (1 - hue) * 6
-        end
-        timeLabel.TextColor3 = Color3.new(r, g, b)
-    end
-    
     local function updateTime()
         local utcTime = os.time()
         local beijingTime = utcTime + 8 * 3600
         local timeTable = os.date("!*t", beijingTime)
         local timeString = string.format("%02d:%02d:%02d", timeTable.hour, timeTable.min, timeTable.sec)
         timeLabel.Text = timeString
-        updateGradient()
     end
     
-    local timeConnection
-    timeConnection = game:GetService("RunService").Heartbeat:Connect(function()
-        updateTime()
-    end)
+    local timeConnection = game:GetService("RunService").Heartbeat:Connect(updateTime)
     updateTime()
     
     return screenGui, timeConnection
@@ -1172,17 +1048,31 @@ end
 
 -- ====== 创建主UI的函数 ======
 function createAtrumixUI()
+    -- 尝试设置保存的主题
+    pcall(function()
+        Loaded_Main_Lua:AddTheme({
+            Name = currentThemeName,
+            Accent = accentColor,
+            Outline = outlineColor,
+            Text = textColor,
+            PlaceholderText = placeholderTextColor,
+        })
+        Loaded_Main_Lua:SetTheme(currentThemeName)
+    end)
+    
     local Window = Loaded_Main_Lua:CreateWindow({
         User = {
             Enabled = true,
             Callback = function()
-                Loaded_Main_Lua:Notify({
-                    Title = "玩家信息",
-                    Content = "用户名: " .. currentUsername .. "\n职位: " .. getUserPosition(currentUsername),
-                    Duration = 4,
-                    Icon = "user",
-                    Color = Color3.fromRGB(59, 130, 246)
-                })
+                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                    Loaded_Main_Lua:Notify({
+                        Title = "玩家信息",
+                        Content = "用户名: " .. currentUsername .. "\n职位: " .. getUserPosition(currentUsername),
+                        Duration = 4,
+                        Icon = "user",
+                        Color = Color3.fromRGB(59, 130, 246)
+                    })
+                end
             end,
             Anonymous = false,
         },
@@ -1199,16 +1089,19 @@ function createAtrumixUI()
         Size = UDim2.fromOffset(700,700),
     })
     
-    -- 添加边框
+    -- 获取窗口Frame并添加边框
     local windowFrame = Window:GetWindowFrame()
     if windowFrame then
-        local stroke = Instance.new("UIStroke")
-        stroke.Thickness = 3
-        stroke.Color = Color3.fromHex(accentColor)
-        stroke.Parent = windowFrame
+        -- 确保有UIStroke
+        local stroke = windowFrame:FindFirstChildOfClass("UIStroke")
+        if not stroke then
+            stroke = Instance.new("UIStroke")
+            stroke.Thickness = 3
+            stroke.Parent = windowFrame
+        end
         
         -- 开始动态边框
-        local borderConnection = createDynamicBorder(windowFrame, borderStyle, borderSpeed)
+        createDynamicBorder(windowFrame, borderStyle, borderSpeed)
     end
     
     Window:EditOpenButton({
@@ -1221,10 +1114,43 @@ function createAtrumixUI()
     })
     
     -- 显示欢迎通知
-    showAdvancedNotification("Atrumix", "执行成功", 3)
-    showAdvancedNotification("Atrumix", "感谢您使用ᵃᵗʳᵘᵐⁱˣ", 3)
-    showAdvancedNotification("Atrumix", "本脚本仅限墨龙‖凌霄军团使用", 3)
-    showAdvancedNotification("Atrumix", "作者：南烛    脚本由我一人制作，所以更新速度慢", 4)
+    if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+        Loaded_Main_Lua:Notify({
+            Title = "欢迎回家",
+            Content = string.format("用户名: %s\n职位: %s%s", 
+                currentUsername, 
+                specialMark, 
+                userPosition
+            ),
+            Duration = 6,
+            Position = "BottomRight",
+            Icon = "user-check",
+            Color = Color3.fromRGB(50, 205, 50),
+            CloseAnimation = "FadeOut",
+            OpenAnimation = "FadeIn"
+        })
+        
+        Loaded_Main_Lua:Notify({
+            Title = "Atrumix",
+            Content = "感谢您使用ᵃᵗʳᵘᵐⁱˣ",
+            Duration = 3,
+            Icon = "info"
+        })
+        
+        Loaded_Main_Lua:Notify({
+            Title = "Atrumix",
+            Content = "本脚本仅限墨龙‖凌霄军团使用",
+            Duration = 3,
+            Icon = "info"
+        })
+        
+        Loaded_Main_Lua:Notify({
+            Title = "Atrumix",
+            Content = "作者：南烛    脚本由我一人制作，所以更新速度慢",
+            Duration = 4,
+            Icon = "info"
+        })
+    end
     
     -- 创建选项卡
     local InfoTab = Window:Tab({
@@ -1296,38 +1222,40 @@ function createAtrumixUI()
     InfoTab:Button({
         Title = "📢 点击查看脚本公告",
         Callback = function()
-            Loaded_Main_Lua:Notify({
-                Title = "📢 脚本公告 - 军团联合训练战",
-                Content = "自今日起，【星夜海】军团与【墨龙 凌霄】军团约定，待手游正式上线后，将联合开启专属【友军训练战】，以战会友、切磋共进。",
-                Duration = 8,
-                Position = "Center",
-                Icon = "megaphone",
-                Color = Color3.fromRGB(255, 165, 0),
-                CloseAnimation = "FadeOut",
-                OpenAnimation = "FadeIn"
-            })
-            wait(2)
-            Loaded_Main_Lua:Notify({
-                Title = "📋 训练战规则说明",
-                Content = "本次训练战定于手游上线后的第六周正式开启，赛事全程恪守专属规则与注意事项：\n• 参赛人员限定为远古龙战力持有者\n• 战斗中复活所需费用，由双方军团共同承担\n• 对战全程禁用所有技能，仅可使用普通咬击进行对抗\n• 坚守『友谊第一，比赛第二』的核心原则",
-                Duration = 12,
-                Position = "Center",
-                Icon = "clipboard-list",
-                Color = Color3.fromRGB(30, 144, 255),
-                CloseAnimation = "SlideOut",
-                OpenAnimation = "SlideIn"
-            })
-            wait(3)
-            Loaded_Main_Lua:Notify({
-                Title = "🏆 赛程安排 & 奖励",
-                Content = "赛事共分三轮依次开展：\n\n【第一轮】军团普通成员对决\n• 双方各派出一名成员进行1V1单挑\n• 存活方即为该局胜者\n\n【第二轮】各分队队长交锋\n• 待所有普通成员完成对战后进行\n• 双方各分队队长接续进行1V1单挑\n• 规则与首轮一致\n\n【第三轮】军团核心战力对决\n• 双方军团的团长与副团长组队配合\n• 展开团副联合作战的对抗比拼\n• 最终取胜的军团将独揽6666龙币的专属奖励",
-                Duration = 15,
-                Position = "Center",
-                Icon = "trophy",
-                Color = Color3.fromRGB(255, 215, 0),
-                CloseAnimation = "ScaleOut",
-                OpenAnimation = "ScaleIn"
-            })
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "📢 脚本公告 - 军团联合训练战",
+                    Content = "自今日起，【星夜海】军团与【墨龙 凌霄】军团约定，待手游正式上线后，将联合开启专属【友军训练战】，以战会友、切磋共进。",
+                    Duration = 8,
+                    Position = "Center",
+                    Icon = "megaphone",
+                    Color = Color3.fromRGB(255, 165, 0),
+                    CloseAnimation = "FadeOut",
+                    OpenAnimation = "FadeIn"
+                })
+                wait(2)
+                Loaded_Main_Lua:Notify({
+                    Title = "📋 训练战规则说明",
+                    Content = "本次训练战定于手游上线后的第六周正式开启，赛事全程恪守专属规则与注意事项：\n• 参赛人员限定为远古龙战力持有者\n• 战斗中复活所需费用，由双方军团共同承担\n• 对战全程禁用所有技能，仅可使用普通咬击进行对抗\n• 坚守『友谊第一，比赛第二』的核心原则",
+                    Duration = 12,
+                    Position = "Center",
+                    Icon = "clipboard-list",
+                    Color = Color3.fromRGB(30, 144, 255),
+                    CloseAnimation = "SlideOut",
+                    OpenAnimation = "SlideIn"
+                })
+                wait(3)
+                Loaded_Main_Lua:Notify({
+                    Title = "🏆 赛程安排 & 奖励",
+                    Content = "赛事共分三轮依次开展：\n\n【第一轮】军团普通成员对决\n• 双方各派出一名成员进行1V1单挑\n• 存活方即为该局胜者\n\n【第二轮】各分队队长交锋\n• 待所有普通成员完成对战后进行\n• 双方各分队队长接续进行1V1单挑\n• 规则与首轮一致\n\n【第三轮】军团核心战力对决\n• 双方军团的团长与副团长组队配合\n• 展开团副联合作战的对抗比拼\n• 最终取胜的军团将独揽6666龙币的专属奖励",
+                    Duration = 15,
+                    Position = "Center",
+                    Icon = "trophy",
+                    Color = Color3.fromRGB(255, 215, 0),
+                    CloseAnimation = "ScaleOut",
+                    OpenAnimation = "ScaleIn"
+                })
+            end
         end,
     })
     
@@ -1352,65 +1280,73 @@ function createAtrumixUI()
     InfoTab:Button({
         Title = "欢迎回家",
         Callback = function()
-            Loaded_Main_Lua:Notify({
-                Title = "欢迎回家",
-                Content = string.format("用户名: %s\n职位: %s%s", 
-                    currentUsername, 
-                    specialMark, 
-                    userPosition
-                ),
-                Duration = 6,
-                Position = "BottomRight",
-                Icon = "user-check",
-                Color = Color3.fromRGB(50, 205, 50),
-                CloseAnimation = "FadeOut",
-                OpenAnimation = "FadeIn"
-            })
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "欢迎回家",
+                    Content = string.format("用户名: %s\n职位: %s%s", 
+                        currentUsername, 
+                        specialMark, 
+                        userPosition
+                    ),
+                    Duration = 6,
+                    Position = "BottomRight",
+                    Icon = "user-check",
+                    Color = Color3.fromRGB(50, 205, 50),
+                    CloseAnimation = "FadeOut",
+                    OpenAnimation = "FadeIn"
+                })
+            end
         end,
     })
     
     InfoTab:Button({
         Title = "关于Atrumix",
         Callback = function()
-            showAdvancedNotification(
-                "关于 Atrumix",
-                "欢迎 " .. currentUsername .. " 使用Atrumix脚本\n\n" ..
-                "职位: " .. userPosition .. "\n\n" ..
-                "作者：南烛\n\n" ..
-                "脚本由我一人制作，所以更新速度慢\n\n" ..
-                "仅限墨龙‖凌霄军团成员使用\n\n" ..
-                "感谢您的使用与支持！",
-                10
-            )
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "关于 Atrumix",
+                    Content = "欢迎 " .. currentUsername .. " 使用Atrumix脚本\n\n" ..
+                             "职位: " .. userPosition .. "\n\n" ..
+                             "作者：南烛\n\n" ..
+                             "脚本由我一人制作，所以更新速度慢\n\n" ..
+                             "仅限墨龙‖凌霄军团成员使用\n\n" ..
+                             "感谢您的使用与支持！",
+                    Duration = 10
+                })
+            end
         end,
     })
     
     InfoTab:Button({
         Title = "显示帮助",
         Callback = function()
-            showAdvancedNotification(
-                "使用帮助",
-                "1. 选择对应游戏后点击按钮加载脚本\n" ..
-                "2. 使用【自动检测并执行】可自动检测游戏\n" ..
-                "3. 其他脚本为别人制作\n" ..
-                "4. 您有权限修改主题颜色和边框样式\n" ..
-                "5. 如有问题请联系作者🐧：1901671661",
-                8
-            )
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "使用帮助",
+                    Content = "1. 选择对应游戏后点击按钮加载脚本\n" ..
+                             "2. 使用【自动检测并执行】可自动检测游戏\n" ..
+                             "3. 其他脚本为别人制作\n" ..
+                             "4. 您有权限修改主题颜色和边框样式\n" ..
+                             "5. 如有问题请联系作者🐧：1901671661",
+                    Duration = 8
+                })
+            end
         end,
     })
     
     InfoTab:Button({
         Title = "显示用户信息",
         Callback = function()
-            showAdvancedNotification(
-                "用户信息",
-                "用户名: " .. currentUsername .. "\n" ..
-                "职位: " .. userPosition .. "\n" ..
-                "用户ID: " .. game.Players.LocalPlayer.UserId .. "\n" ..
-                "账户年龄: " .. game.Players.LocalPlayer.AccountAge .. " 天",
-                8
-            )
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "用户信息",
+                    Content = "用户名: " .. currentUsername .. "\n" ..
+                             "职位: " .. userPosition .. "\n" ..
+                             "用户ID: " .. game.Players.LocalPlayer.UserId .. "\n" ..
+                             "账户年龄: " .. game.Players.LocalPlayer.AccountAge .. " 天",
+                    Duration = 8
+                })
+            end
         end,
     })
     
@@ -1424,14 +1360,16 @@ function createAtrumixUI()
             
             local gameName = success and gameInfo.Name or "未知游戏"
             
-            showAdvancedNotification(
-                "当前游戏信息",
-                "游戏名称: " .. gameName .. "\n" ..
-                "游戏ID: " .. currentGameId .. "\n" ..
-                "服务器ID: " .. game.JobId .. "\n" ..
-                "玩家数量: " .. #game.Players:GetPlayers(),
-                8
-            )
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "当前游戏信息",
+                    Content = "游戏名称: " .. gameName .. "\n" ..
+                             "游戏ID: " .. currentGameId .. "\n" ..
+                             "服务器ID: " .. game.JobId .. "\n" ..
+                             "玩家数量: " .. #game.Players:GetPlayers(),
+                    Duration = 8
+                })
+            end
         end,
     })
     
@@ -1449,7 +1387,6 @@ function createAtrumixUI()
         AllowNone = true,
         Values = scriptUsers,
         Callback = function(selectedUser)
-            -- 保存选中的用户
             _G.selectedUserToKick = selectedUser
         end,
     })
@@ -1459,36 +1396,42 @@ function createAtrumixUI()
         Callback = function()
             local targetUser = _G.selectedUserToKick
             if not targetUser then
-                Loaded_Main_Lua:Notify({
-                    Title = "操作失败",
-                    Content = "请先选择一个玩家",
-                    Duration = 3,
-                    Icon = "x-circle",
-                    Color = Color3.fromRGB(239, 68, 68)
-                })
+                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                    Loaded_Main_Lua:Notify({
+                        Title = "操作失败",
+                        Content = "请先选择一个玩家",
+                        Duration = 3,
+                        Icon = "x-circle",
+                        Color = Color3.fromRGB(239, 68, 68)
+                    })
+                end
                 return
             end
             
             if targetUser == currentUsername then
-                Loaded_Main_Lua:Notify({
-                    Title = "操作失败",
-                    Content = "不能踢出自己",
-                    Duration = 3,
-                    Icon = "x-circle",
-                    Color = Color3.fromRGB(239, 68, 68)
-                })
+                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                    Loaded_Main_Lua:Notify({
+                        Title = "操作失败",
+                        Content = "不能踢出自己",
+                        Duration = 3,
+                        Icon = "x-circle",
+                        Color = Color3.fromRGB(239, 68, 68)
+                    })
+                end
                 return
             end
             
             local success = kickPlayer(targetUser)
             if success then
-                Loaded_Main_Lua:Notify({
-                    Title = "操作成功",
-                    Content = "已踢出玩家: " .. targetUser,
-                    Duration = 3,
-                    Icon = "check-circle",
-                    Color = Color3.fromRGB(34, 197, 94)
-                })
+                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                    Loaded_Main_Lua:Notify({
+                        Title = "操作成功",
+                        Content = "已踢出玩家: " .. targetUser,
+                        Duration = 3,
+                        Icon = "check-circle",
+                        Color = Color3.fromRGB(34, 197, 94)
+                    })
+                end
                 
                 -- 从下拉框中移除
                 local newUsers = {}
@@ -1500,13 +1443,15 @@ function createAtrumixUI()
                 scriptUsers = newUsers
                 userDropdown:Refresh(scriptUsers)
             else
-                Loaded_Main_Lua:Notify({
-                    Title = "操作失败",
-                    Content = "踢出玩家失败",
-                    Duration = 3,
-                    Icon = "x-circle",
-                    Color = Color3.fromRGB(239, 68, 68)
-                })
+                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                    Loaded_Main_Lua:Notify({
+                        Title = "操作失败",
+                        Content = "踢出玩家失败",
+                        Duration = 3,
+                        Icon = "x-circle",
+                        Color = Color3.fromRGB(239, 68, 68)
+                    })
+                end
             end
         end,
     })
@@ -1517,13 +1462,15 @@ function createAtrumixUI()
             scriptUsers = detectScriptUsers()
             userDropdown:Refresh(scriptUsers)
             
-            Loaded_Main_Lua:Notify({
-                Title = "刷新成功",
-                Content = "已刷新玩家列表，共 " .. #scriptUsers .. " 人",
-                Duration = 2,
-                Icon = "refresh-cw",
-                Color = Color3.fromRGB(34, 197, 94)
-            })
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "刷新成功",
+                    Content = "已刷新玩家列表，共 " .. #scriptUsers .. " 人",
+                    Duration = 2,
+                    Icon = "refresh-cw",
+                    Color = Color3.fromRGB(34, 197, 94)
+                })
+            end
         end,
     })
     
@@ -1559,12 +1506,14 @@ function createAtrumixUI()
         Title = "刷新界面",
         Callback = function()
             game:GetService("CoreGui"):ClearAllChildren()
-            Loaded_Main_Lua:Notify({
-                Title = "界面已刷新",
-                Content = "正在重新加载界面...",
-                Duration = 3,
-                Icon = "refresh-cw"
-            })
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "界面已刷新",
+                    Content = "正在重新加载界面...",
+                    Duration = 3,
+                    Icon = "refresh-cw"
+                })
+            end
             wait(1)
             createAtrumixUI()
         end,
@@ -1578,13 +1527,15 @@ function createAtrumixUI()
     ServerTab:Button({
         Title = "🚀 自动检测并执行",
         Callback = function()
-            Loaded_Main_Lua:Notify({
-                Title = "正在检测游戏",
-                Content = "正在检测当前游戏并执行对应脚本...",
-                Duration = 3,
-                Icon = "search",
-                Color = Color3.fromRGB(59, 130, 246)
-            })
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "正在检测游戏",
+                    Content = "正在检测当前游戏并执行对应脚本...",
+                    Duration = 3,
+                    Icon = "search",
+                    Color = Color3.fromRGB(59, 130, 246)
+                })
+            end
             autoDetectAndExecute()
         end,
     })
@@ -1646,37 +1597,17 @@ function createAtrumixUI()
             end)
             
             if success then
-                Loaded_Main_Lua:Notify({
-                    Title = "凹凸世界",
-                    Content = "脚本加载成功！",
-                    Duration = 3,
-                    Icon = "check",
-                    Color = Color3.fromRGB(34, 197, 94)
-                })
-            else
-                local backupSuccess, backupError = pcall(function()
-                    local backupContent = game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E5%87%B9%E5%87%B8%E4%B8%96%E7%95%8C')
-                    if backupContent and #backupContent > 0 then
-                        local backupFunc = loadstring(backupContent)
-                        if backupFunc then
-                            backupFunc()
-                        else
-                            error("备用脚本编译失败")
-                        end
-                    else
-                        error("获取的备用脚本内容为空")
-                    end
-                end)
-                
-                if backupSuccess then
+                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
                     Loaded_Main_Lua:Notify({
                         Title = "凹凸世界",
-                        Content = "脚本加载成功！（备用链接）",
+                        Content = "脚本加载成功！",
                         Duration = 3,
                         Icon = "check",
                         Color = Color3.fromRGB(34, 197, 94)
                     })
-                else
+                end
+            else
+                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
                     Loaded_Main_Lua:Notify({
                         Title = "凹凸世界",
                         Content = "脚本加载失败，请检查网络或联系作者",
@@ -1745,40 +1676,36 @@ function createAtrumixUI()
         AllowNone = false,
         Values = colorThemeNames,
         Callback = function(selectedTheme)
-            local theme = colorThemes[selectedTheme]
-            if theme then
-                accentColor = theme.Accent
-                outlineColor = theme.Outline
-                textColor = theme.Text
-                placeholderTextColor = theme.Placeholder
-                currentThemeName = selectedTheme
-                
-                -- 更新颜色选择器
-                if accentPicker and accentPicker.SetValue then
-                    local success, color = pcall(function() return Color3.fromHex(accentColor) end)
-                    if success then
-                        accentPicker:SetValue(color)
-                    end
+            applyColorTheme(selectedTheme)
+            
+            -- 更新颜色选择器
+            if accentPicker and accentPicker.SetValue then
+                local success, color = pcall(function() return Color3.fromHex(accentColor) end)
+                if success then
+                    accentPicker:SetValue(color)
                 end
-                if outlinePicker and outlinePicker.SetValue then
-                    local success, color = pcall(function() return Color3.fromHex(outlineColor) end)
-                    if success then
-                        outlinePicker:SetValue(color)
-                    end
+            end
+            if outlinePicker and outlinePicker.SetValue then
+                local success, color = pcall(function() return Color3.fromHex(outlineColor) end)
+                if success then
+                    outlinePicker:SetValue(color)
                 end
-                if textPicker and textPicker.SetValue then
-                    local success, color = pcall(function() return Color3.fromHex(textColor) end)
-                    if success then
-                        textPicker:SetValue(color)
-                    end
+            end
+            if textPicker and textPicker.SetValue then
+                local success, color = pcall(function() return Color3.fromHex(textColor) end)
+                if success then
+                    textPicker:SetValue(color)
                 end
-                if placeholderPicker and placeholderPicker.SetValue then
-                    local success, color = pcall(function() return Color3.fromHex(placeholderTextColor) end)
-                    if success then
-                        placeholderPicker:SetValue(color)
-                    end
+            end
+            if placeholderPicker and placeholderPicker.SetValue then
+                local success, color = pcall(function() return Color3.fromHex(placeholderTextColor) end)
+                if success then
+                    placeholderPicker:SetValue(color)
                 end
-                
+            end
+            
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                local theme = colorThemes[selectedTheme]
                 Loaded_Main_Lua:Notify({
                     Title = "已选择主题",
                     Content = selectedTheme .. "\n" .. theme.Description,
@@ -1791,12 +1718,7 @@ function createAtrumixUI()
     })
     
     -- 设置默认选中的主题
-    for _, name in ipairs(colorThemeNames) do
-        if name == currentThemeName then
-            colorThemeDropdown:Select(currentThemeName)
-            break
-        end
-    end
+    colorThemeDropdown:Select(currentThemeName)
     
     ThemeTab:Section({
         Title = "🎯 自定义颜色微调",
@@ -1883,7 +1805,7 @@ function createAtrumixUI()
             
             -- 显示样式描述
             local styleData = borderStyles[selectedStyle]
-            if styleData then
+            if styleData and Loaded_Main_Lua and Loaded_Main_Lua.Notify then
                 Loaded_Main_Lua:Notify({
                     Title = "已选择边框样式",
                     Content = selectedStyle .. "\n" .. styleData.description,
@@ -1919,38 +1841,34 @@ function createAtrumixUI()
         Title = "✅ 应用主题",
         Callback = function()
             -- 更新主题
-            local customTheme = {
-                Name = currentThemeName,
-                Accent = accentColor,
-                Outline = outlineColor,
-                Text = textColor,
-                PlaceholderText = placeholderTextColor,
-            }
-            
             pcall(function()
-                Loaded_Main_Lua:AddTheme(customTheme)
+                Loaded_Main_Lua:AddTheme({
+                    Name = currentThemeName,
+                    Accent = accentColor,
+                    Outline = outlineColor,
+                    Text = textColor,
+                    PlaceholderText = placeholderTextColor,
+                })
                 Loaded_Main_Lua:SetTheme(currentThemeName)
             end)
             
             -- 更新边框
             local windowFrame = Window:GetWindowFrame()
             if windowFrame then
-                -- 移除旧的边框连接
-                if _G.borderConnection then
-                    _G.borderConnection:Disconnect()
-                end
-                _G.borderConnection = createDynamicBorder(windowFrame, borderStyle, borderSpeed)
+                createDynamicBorder(windowFrame, borderStyle, borderSpeed)
             end
             
             -- 保存设置
             saveUserThemeSettings()
             
-            Loaded_Main_Lua:Notify({
-                Title = "主题已更新",
-                Content = "当前主题: " .. currentThemeName .. "\n边框样式: " .. borderStyle,
-                Icon = "palette",
-                Duration = 3,
-            })
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "主题已更新",
+                    Content = "当前主题: " .. currentThemeName .. "\n边框样式: " .. borderStyle,
+                    Icon = "palette",
+                    Duration = 3,
+                })
+            end
         end,
     })
     
@@ -1983,38 +1901,35 @@ function createAtrumixUI()
             end
             
             -- 应用主题
-            local customTheme = {
-                Name = currentThemeName,
-                Accent = accentColor,
-                Outline = outlineColor,
-                Text = textColor,
-                PlaceholderText = placeholderTextColor,
-            }
-            
             pcall(function()
-                Loaded_Main_Lua:AddTheme(customTheme)
+                Loaded_Main_Lua:AddTheme({
+                    Name = currentThemeName,
+                    Accent = accentColor,
+                    Outline = outlineColor,
+                    Text = textColor,
+                    PlaceholderText = placeholderTextColor,
+                })
                 Loaded_Main_Lua:SetTheme(currentThemeName)
             end)
             
             -- 更新边框
             local windowFrame = Window:GetWindowFrame()
             if windowFrame then
-                if _G.borderConnection then
-                    _G.borderConnection:Disconnect()
-                end
-                _G.borderConnection = createDynamicBorder(windowFrame, borderStyle, borderSpeed)
+                createDynamicBorder(windowFrame, borderStyle, borderSpeed)
             end
             
             -- 保存设置
             saveUserThemeSettings()
             
-            Loaded_Main_Lua:Notify({
-                Title = "已重置为默认主题",
-                Content = "主题已恢复默认设置",
-                Duration = 3,
-                Icon = "check-circle",
-                Color = Color3.fromRGB(34, 197, 94)
-            })
+            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+                Loaded_Main_Lua:Notify({
+                    Title = "已重置为默认主题",
+                    Content = "主题已恢复默认设置",
+                    Duration = 3,
+                    Icon = "check-circle",
+                    Color = Color3.fromRGB(34, 197, 94)
+                })
+            end
         end,
     })
     
@@ -2032,15 +1947,7 @@ function createAtrumixUI()
     })
     
     ThemeTab:Label({
-        Title = "强调色: " .. accentColor,
-    })
-    
-    ThemeTab:Label({
-        Title = "边框色: " .. outlineColor,
-    })
-    
-    ThemeTab:Label({
-        Title = "文本色: " .. textColor,
+        Title = "边框速度: " .. borderSpeed .. "x",
     })
     
     return Window
@@ -2061,60 +1968,32 @@ spawn(function()
     end
 end)
 
--- 显示确认弹窗
-Loaded_Main_Lua:Popup({
-    Title = "Atrumix 脚本确认",
-    IconThemed = true,
-    Content = "欢迎 " .. game.Players.LocalPlayer.Name .. " 使用Atrumix脚本\n\n" ..
-             "职位: " .. getUserPosition(currentUsername) .. "\n\n" ..
-             "主题自定义: ✅ 已授权（共" .. #colorThemeNames .. "种预设）\n" ..
-             "边框样式: ✅ 已授权（共" .. #borderStyleNames .. "种样式）\n\n" ..
-             "仅限墨龙‖凌霄军团成员使用",
-    Buttons = {
-        {
-            Title = "取消",
-            Callback = function() 
-                print("用户取消了脚本执行")
-                Loaded_Main_Lua:Notify({
-                    Title = "已取消",
-                    Content = "脚本执行已被取消",
-                    Duration = 3,
-                    Icon = "info-circle"
-                })
-            end,
-            Variant = "Secondary",
-        },
-        {
-            Title = "执行",
-            Icon = "arrow-right",
-            Callback = function() 
-                -- 创建右上角北京时间显示
-                createBeijingTimeDisplay()
-                
-                -- 显示创建成功通知
-                Loaded_Main_Lua:Notify({
-                    Title = "已启用北京时间显示",
-                    Content = "已在屏幕右上角显示北京时间\n时间每秒钟更新一次",
-                    Duration = 5,
-                    Position = "TopCenter",
-                    Icon = "clock",
-                    Color = Color3.fromRGB(0, 150, 255)
-                })
-                
-                -- 调用主UI创建函数
-                createAtrumixUI()
-                
-                -- 显示主题信息
-                Loaded_Main_Lua:Notify({
-                    Title = "主题加载完成",
-                    Content = "当前主题: " .. currentThemeName .. "\n边框样式: " .. borderStyle,
-                    Duration = 4,
-                    Position = "TopCenter",
-                    Icon = "palette",
-                    Color = Color3.fromRGB(147, 51, 234)
-                })
-            end,
-            Variant = "Primary",
-        }
-    }
-})
+-- 显示欢迎通知
+if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+    Loaded_Main_Lua:Notify({
+        Title = "Atrumix",
+        Content = "脚本加载成功，正在准备界面...",
+        Duration = 3,
+        Icon = "info"
+    })
+end
+
+-- 创建右上角北京时间显示
+createBeijingTimeDisplay()
+
+-- 延迟一下再创建主UI
+wait(1)
+
+-- 创建主UI
+createAtrumixUI()
+
+-- 显示加载完成通知
+if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
+    Loaded_Main_Lua:Notify({
+        Title = "加载完成",
+        Content = "Atrumix 已成功加载！\n当前主题: " .. currentThemeName,
+        Duration = 4,
+        Icon = "check-circle",
+        Color = Color3.fromRGB(34, 197, 94)
+    })
+end
