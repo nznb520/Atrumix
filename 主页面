@@ -1,1255 +1,660 @@
--- ====== Atrumix 主脚本 ======
+-- ====== 炸学校脚本 ======
 -- 作者：南烛
 -- 仅限墨龙‖凌霄军团使用
 -- 最后更新时间：2026-02-28
 
--- 只加载一次 WindUI，使用可靠的链接
-local Loaded_Main_Lua = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+-- ====== 卡密验证系统 ======
+local correctPassword = "我要炸学校"
+local isVerified = false
 
--- ====== 用户名检测系统 ======
-local allowedUsernames = {
-    "lingxiaoge6",  -- 副团长
-    "yggcxfchbj",   -- 1分队队长
-    "sjdjdnddkn",   -- 4分队队长
-    "1q2wqqqqqqqqw", -- 军团客人
-    "nznb666520",   -- 测试
-    "hiemou4",      -- 作者朋友
-}
-
-local userPositions = {
-    ["lingxiaoge6"] = "副团长", 
-    ["yggcxfchbj"] = "1分队队长",
-    ["sjdjdnddkn"] = "4分队队长",
-    ["1q2wqqqqqqqqw"] = "军团客人",
-    ["hiemou4"] = "作者朋友",
-    ["nznb666520"] = "测试",
-}
-
-local currentUsername = game.Players.LocalPlayer.Name
-
-local function isUserAllowed()
-    for _, allowedName in ipairs(allowedUsernames) do
-        if currentUsername == allowedName then
-            return true
-        end
-    end
-    return false
-end
-
-local function getUserPosition(username)
-    return userPositions[username] or "军团成员"
-end
-
--- HttpService 用于JSON处理
-local HttpService = game:GetService("HttpService")
-local settingsFolderName = "Atrumix_Config"
-
--- 创建文件夹（如果支持）
-if makefolder then 
-    pcall(function() makefolder(settingsFolderName) end) 
-end
-
--- 保存设置到文件
-local function saveSettings(fileName, data)
-    if writefile then
-        local success, err = pcall(function()
-            writefile(settingsFolderName .. "/" .. fileName .. ".json", HttpService:JSONEncode(data))
-        end)
-        if not success then
-            warn("保存设置失败: " .. tostring(err))
-        end
-    end
-end
-
--- 从文件加载设置
-local function loadSettings(fileName)
-    if isfile and readfile then
-        local filePath = settingsFolderName .. "/" .. fileName .. ".json"
-        if isfile(filePath) then
-            local fileContent = readfile(filePath)
-            if fileContent then
-                local success, decodedData = pcall(function()
-                    return HttpService:JSONDecode(fileContent)
-                end)
-                if success then return decodedData end
-            end
-        end
-    end
-    return nil
-end
-
--- 初始化颜色变量（从本地加载）
-local userThemeSettings = loadSettings("user_theme_" .. currentUsername) or {}
-local currentThemeName = userThemeSettings.ThemeName or "🔵 蓝色 (默认)"
-local accentColor = userThemeSettings.Accent or "#1e88e5"
-local outlineColor = userThemeSettings.Outline or "#ffffff"
-local textColor = userThemeSettings.Text or "#ffffff"
-local placeholderTextColor = userThemeSettings.PlaceholderText or "#808080"
-local borderStyle = userThemeSettings.BorderStyle or "⚡ 动态彩虹"
-local borderSpeed = userThemeSettings.BorderSpeed or 1.0
-
--- ====== 预定义颜色主题 ======
-local colorThemes = {
-    -- 基础色系
-    ["🔵 蓝色 (默认)"] = {
-        Accent = "#1e88e5",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "经典蓝色主题"
-    },
-    ["🟣 紫色"] = {
-        Accent = "#9c27b0",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#a0a0a0",
-        Description = "优雅紫色主题"
-    },
-    ["🔴 红色"] = {
-        Accent = "#f44336",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#a0a0a0",
-        Description = "热情红色主题"
-    },
-    ["🟢 绿色"] = {
-        Accent = "#4caf50",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#a0a0a0",
-        Description = "清新绿色主题"
-    },
-    ["🟡 黄色"] = {
-        Accent = "#ffc107",
-        Outline = "#333333",
-        Text = "#333333",
-        Placeholder = "#666666",
-        Description = "明亮黄色主题"
-    },
-    ["🟠 橙色"] = {
-        Accent = "#ff9800",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#a0a0a0",
-        Description = "活力橙色主题"
-    },
-    ["💗 粉色"] = {
-        Accent = "#e91e63",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#a0a0a0",
-        Description = "甜美粉色主题"
-    },
-    ["🖤 黑色"] = {
-        Accent = "#212121",
-        Outline = "#4caf50",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "暗黑风格主题"
-    },
-    ["✨ 青色"] = {
-        Accent = "#00bcd4",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#a0a0a0",
-        Description = "海洋青色主题"
-    },
-    ["💙 深蓝"] = {
-        Accent = "#0d47a1",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "深邃蓝主题"
-    },
-    ["💜 紫罗兰"] = {
-        Accent = "#673ab7",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#a0a0a0",
-        Description = "高贵紫罗兰"
-    },
-    ["❤️ 深红"] = {
-        Accent = "#b71c1c",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "庄重深红主题"
-    },
-    ["💚 翠绿"] = {
-        Accent = "#2e7d32",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "自然翠绿主题"
-    },
-    ["🧡 琥珀"] = {
-        Accent = "#ff6f00",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "温暖琥珀主题"
-    },
-    ["🌈 彩虹"] = {
-        Accent = "#ff4081",
-        Outline = "#7c4dff",
-        Text = "#ffffff",
-        Placeholder = "#a0a0a0",
-        Description = "多彩彩虹主题"
-    },
-    ["🌊 海洋"] = {
-        Accent = "#006064",
-        Outline = "#00acc1",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "深邃海洋主题"
-    },
-    ["🌿 森林"] = {
-        Accent = "#1b5e20",
-        Outline = "#81c784",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "宁静森林主题"
-    },
-    ["🌅 日落"] = {
-        Accent = "#bf360c",
-        Outline = "#ffb74d",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "浪漫日落主题"
-    },
-    ["🌙 月光"] = {
-        Accent = "#37474f",
-        Outline = "#b0bec5",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "静谧月光主题"
-    },
-    ["✨ 星尘"] = {
-        Accent = "#311b92",
-        Outline = "#b388ff",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "梦幻星尘主题"
-    },
-    ["🎨 自定义"] = {
-        Accent = "#1e88e5",
-        Outline = "#ffffff",
-        Text = "#ffffff",
-        Placeholder = "#808080",
-        Description = "点击下方颜色选择器自定义"
-    }
-}
-
--- 生成颜色主题列表（用于下拉框）
-local colorThemeNames = {}
-for name, _ in pairs(colorThemes) do
-    table.insert(colorThemeNames, name)
-end
-table.sort(colorThemeNames)
-
--- ====== 边框样式配置 ======
-local borderStyles = {
-    ["⚡ 动态彩虹"] = {
-        type = "sequential",
-        colors = {"#ff0000", "#ff7f00", "#ffff00", "#00ff00", "#0000ff", "#4b0082", "#8f00ff"},
-        speed = borderSpeed,
-        description = "七色动态彩虹循环"
-    },
-    ["🔥 火焰"] = {
-        type = "gradient",
-        colors = {"#ff4500", "#ff8c00", "#ffd700", "#ff4500"},
-        speed = borderSpeed,
-        description = "红橙黄火焰渐变"
-    },
-    ["💧 海洋"] = {
-        type = "gradient",
-        colors = {"#00ffff", "#1e90ff", "#0000cd", "#00ffff"},
-        speed = borderSpeed,
-        description = "蓝青色海洋渐变"
-    },
-    ["🌿 森林"] = {
-        type = "gradient",
-        colors = {"#228b22", "#32cd32", "#7cfc00", "#228b22"},
-        speed = borderSpeed,
-        description = "绿色森林渐变"
-    },
-    ["🌸 樱花"] = {
-        type = "gradient",
-        colors = {"#ffb7c5", "#ff69b4", "#ff1493", "#ffb7c5"},
-        speed = borderSpeed,
-        description = "粉红樱花渐变"
-    },
-    ["🌅 日落"] = {
-        type = "gradient",
-        colors = {"#ff4500", "#ff8c00", "#ffd700", "#ff1493"},
-        speed = borderSpeed,
-        description = "橙红粉日落渐变"
-    },
-    ["🌈 彩虹渐变"] = {
-        type = "gradient",
-        colors = {"#ff0000", "#ff7f00", "#ffff00", "#00ff00", "#0000ff", "#4b0082", "#8f00ff"},
-        speed = borderSpeed,
-        description = "七色循环渐变"
-    },
-    ["💜 紫罗兰"] = {
-        type = "gradient",
-        colors = {"#8a2be2", "#9370db", "#ba55d3", "#8a2be2"},
-        speed = borderSpeed,
-        description = "紫色系渐变"
-    },
-    ["💛 黄金"] = {
-        type = "gradient",
-        colors = {"#ffd700", "#f0e68c", "#ffff00", "#ffd700"},
-        speed = borderSpeed,
-        description = "金色渐变"
-    },
-    ["❄️ 极光"] = {
-        type = "gradient",
-        colors = {"#7cfc00", "#00fa9a", "#00ffff", "#7cfc00"},
-        speed = borderSpeed,
-        description = "绿蓝极光渐变"
-    },
-    ["🎆 烟火"] = {
-        type = "random",
-        colors = {"#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff"},
-        speed = borderSpeed * 2,
-        description = "随机彩色变化"
-    },
-    ["💎 宝石"] = {
-        type = "gradient",
-        colors = {"#ff1493", "#9400d3", "#4b0082", "#ff1493"},
-        speed = borderSpeed,
-        description = "红紫宝石渐变"
-    },
-    ["🌌 银河"] = {
-        type = "rainbow",
-        colors = {"#4b0082", "#8a2be2", "#9370db", "#ba55d3", "#ff1493"},
-        speed = borderSpeed * 0.8,
-        description = "梦幻银河渐变"
-    },
-    ["🍁 秋叶"] = {
-        type = "gradient",
-        colors = {"#8b4513", "#d2691e", "#ff8c00", "#8b4513"},
-        speed = borderSpeed,
-        description = "棕橙秋叶渐变"
-    },
-    ["💫 星辉"] = {
-        type = "gradient",
-        colors = {"#ffffff", "#f0f8ff", "#e6e6fa", "#ffffff"},
-        speed = borderSpeed,
-        description = "白蓝星辉渐变"
-    }
-}
-
--- 生成边框样式列表
-local borderStyleNames = {}
-for name, _ in pairs(borderStyles) do
-    table.insert(borderStyleNames, name)
-end
-table.sort(borderStyleNames)
-
--- ====== 检测使用本脚本的玩家 ======
-local function detectScriptUsers()
-    local users = {}
+-- 创建卡密验证UI
+local function showPasswordUI()
+    local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
     
-    -- 通过BindableEvent检测
-    local coreGui = game:GetService("CoreGui")
-    
-    for _, obj in ipairs(coreGui:GetChildren()) do
-        if obj.Name and obj.Name:find("ChatBroadcast_") then
-            local userName = obj.Name:gsub("ChatBroadcast_", "")
-            if userName ~= currentUsername then
-                table.insert(users, userName)
-            end
-        end
-    end
-    
-    -- 如果没有检测到其他用户，至少显示自己
-    if #users == 0 then
-        table.insert(users, currentUsername)
-    end
-    
-    return users
-end
-
--- ====== 踢出玩家函数 ======
-local function kickPlayer(playerName)
-    local player = game.Players:FindFirstChild(playerName)
-    if player and player.Name ~= currentUsername then
-        -- 尝试通过多种方式踢出
-        local success, err = pcall(function()
-            player:Kick("您已被管理员踢出")
-        end)
-        
-        return success
-    end
-    return false
-end
-
--- ====== 创建动态边框 ======
-local borderConnection = nil
-
-local function createDynamicBorder(frame, style, speed)
-    if not frame then return nil end
-    
-    if borderConnection then
-        borderConnection:Disconnect()
-    end
-    
-    local currentColorIndex = 1
-    local lastChangeTime = tick()
-    local colorChangeInterval = 1 / speed  -- 每秒切换一个颜色
-    
-    local function updateBorder()
-        if not frame or not frame.Parent then
-            if borderConnection then
-                borderConnection:Disconnect()
-                borderConnection = nil
-            end
-            return
-        end
-        
-        local styleData = borderStyles[style]
-        if not styleData then return end
-        
-        local newColor
-        
-        if styleData.type == "sequential" then
-            -- 顺序切换彩虹色
-            local currentTime = tick()
-            if currentTime - lastChangeTime >= colorChangeInterval then
-                currentColorIndex = currentColorIndex + 1
-                if currentColorIndex > #styleData.colors then
-                    currentColorIndex = 1
-                end
-                lastChangeTime = currentTime
-            end
-            
-            newColor = Color3.fromHex(styleData.colors[currentColorIndex])
-            
-        elseif styleData.type == "rainbow" then
-            -- 彩虹渐变
-            local hue = (tick() * 0.1 * speed) % 1
-            newColor = Color3.fromHSV(hue, 1, 1)
-            
-        elseif styleData.type == "gradient" then
-            -- 渐变循环
-            local colorIndex = (tick() * 0.2 * speed) % #styleData.colors
-            local nextIndex = (math.floor(colorIndex) % #styleData.colors) + 1
-            
-            local color1 = Color3.fromHex(styleData.colors[math.floor(colorIndex) + 1])
-            local color2 = Color3.fromHex(styleData.colors[nextIndex])
-            
-            -- 插值颜色
-            local progress = colorIndex - math.floor(colorIndex)
-            local r = color1.R + (color2.R - color1.R) * progress
-            local g = color1.G + (color2.G - color1.G) * progress
-            local b = color1.B + (color2.B - color1.B) * progress
-            
-            newColor = Color3.new(r, g, b)
-            
-        elseif styleData.type == "random" then
-            -- 随机颜色
-            local randomIndex = math.random(1, #styleData.colors)
-            newColor = Color3.fromHex(styleData.colors[randomIndex])
-        end
-        
-        if newColor then
-            -- 更新主窗口边框
-            local stroke = frame:FindFirstChildOfClass("UIStroke")
-            if stroke then
-                stroke.Color = newColor
-            end
-            
-            -- 更新打开按钮
-            local openButton = Loaded_Main_Lua and Loaded_Main_Lua:GetOpenButton()
-            if openButton then
-                local btnStroke = openButton:FindFirstChildOfClass("UIStroke")
-                if btnStroke then
-                    btnStroke.Color = newColor
-                end
-            end
-        end
-    end
-    
-    -- 创建连接
-    borderConnection = game:GetService("RunService").Heartbeat:Connect(updateBorder)
-    return borderConnection
-end
-
--- ====== 保存用户主题设置 ======
-local function saveUserThemeSettings()
-    saveSettings("user_theme_" .. currentUsername, {
-        ThemeName = currentThemeName,
-        Accent = accentColor,
-        Outline = outlineColor,
-        Text = textColor,
-        PlaceholderText = placeholderTextColor,
-        BorderStyle = borderStyle,
-        BorderSpeed = borderSpeed,
-        LastUpdated = os.time()
+    -- 创建卡密验证窗口
+    local PasswordWindow = WindUI:CreateWindow({
+        Title = "卡密验证",
+        Folder = "炸学校脚本",
+        Size = UDim2.fromOffset(300, 180),
+        -- 设置窗口不可拖动，确保用户必须完成验证
+        Draggable = false,
     })
+    
+    -- 修改打开按钮文本
+    PasswordWindow:EditOpenButton({
+        Title = "［炸学校脚本］",
+        Color = ColorSequence.new(Color3.fromRGB(255, 0, 0), Color3.fromRGB(128, 0, 0)),
+        Draggable = false,
+    })
+    
+    -- 创建选项卡
+    local AuthTab = PasswordWindow:Tab({
+        Title = "验证",
+        Icon = "lock",
+    })
+    
+    -- 添加说明
+    AuthTab:Label({
+        Title = "请输入卡密以继续使用",
+    })
+    
+    -- 创建输入框
+    local passwordInput = ""
+    local inputBox
+    
+    AuthTab:Input({
+        Title = "卡密",
+        Placeholder = "请输入卡密",
+        Callback = function(value)
+            passwordInput = value
+        end,
+    })
+    
+    -- 确认按钮
+    AuthTab:Button({
+        Title = "确认验证",
+        Callback = function()
+            if passwordInput == correctPassword then
+                isVerified = true
+                -- 关闭验证窗口
+                PasswordWindow:Destroy()
+                -- 继续执行主脚本
+                loadMainScript()
+            else
+                -- 显示错误提示
+                if WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "验证失败",
+                        Content = "卡密错误，请重新输入",
+                        Duration = 3,
+                        Icon = "x-circle",
+                        Color = Color3.fromRGB(255, 0, 0)
+                    })
+                end
+            end
+        end,
+    })
+    
+    -- 添加提示文本
+    AuthTab:Label({
+        Title = "提示：联系作者获取卡密",
+    })
+    
+    return PasswordWindow
 end
 
--- ====== 应用颜色主题 ======
-local function applyColorTheme(themeName)
-    local theme = colorThemes[themeName]
-    if theme then
-        accentColor = theme.Accent
-        outlineColor = theme.Outline
-        textColor = theme.Text
-        placeholderTextColor = theme.Placeholder
-        currentThemeName = themeName
+-- ====== 主脚本加载函数 ======
+function loadMainScript()
+    -- 先检测军团成员
+    local allowedUsernames = {
+        "lingxiaoge6",  -- 副团长
+        "yggcxfchbj",   -- 1分队队长
+        "sjdjdnddkn",   -- 4分队队长
+        "1q2wqqqqqqqqw", -- 军团客人
+        "nznb666520",   -- 测试
+        "hiemou4",      -- 作者朋友
+    }
+
+    local userPositions = {
+        ["lingxiaoge6"] = "副团长", 
+        ["yggcxfchbj"] = "1分队队长",
+        ["sjdjdnddkn"] = "4分队队长",
+        ["1q2wqqqqqqqqw"] = "军团客人",
+        ["hiemou4"] = "作者朋友",
+        ["nznb666520"] = "测试",
+    }
+
+    local currentUsername = game.Players.LocalPlayer.Name
+
+    local function isUserAllowed()
+        for _, allowedName in ipairs(allowedUsernames) do
+            if currentUsername == allowedName then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function getUserPosition(username)
+        return userPositions[username] or "军团成员"
+    end
+
+    -- 如果不是军团成员，执行踢出操作
+    if not isUserAllowed() then
+        wait(1)
+        local player = game.Players.LocalPlayer
+        if player then
+            player:Kick("你不是军团成员 | You're not a Legionnaire")
+        end
+        return
+    end
+
+    -- ====== 正常脚本执行 ======
+    
+    -- HttpService 用于JSON处理
+    local HttpService = game:GetService("HttpService")
+    local settingsFolderName = "Atrumix_Config"
+
+    -- 创建文件夹（如果支持）
+    if makefolder then 
+        pcall(function() makefolder(settingsFolderName) end) 
+    end
+
+    -- 保存设置到文件
+    local function saveSettings(fileName, data)
+        if writefile then
+            local success, err = pcall(function()
+                writefile(settingsFolderName .. "/" .. fileName .. ".json", HttpService:JSONEncode(data))
+            end)
+            if not success then
+                warn("保存设置失败: " .. tostring(err))
+            end
+        end
+    end
+
+    -- 从文件加载设置
+    local function loadSettings(fileName)
+        if isfile and readfile then
+            local filePath = settingsFolderName .. "/" .. fileName .. ".json"
+            if isfile(filePath) then
+                local fileContent = readfile(filePath)
+                if fileContent then
+                    local success, decodedData = pcall(function()
+                        return HttpService:JSONDecode(fileContent)
+                    end)
+                    if success then return decodedData end
+                end
+            end
+        end
+        return nil
+    end
+
+    -- 初始化颜色变量（从本地加载）
+    local userThemeSettings = loadSettings("user_theme_" .. currentUsername) or {}
+    local currentThemeName = userThemeSettings.ThemeName or "🔵 蓝色 (默认)"
+    local accentColor = userThemeSettings.Accent or "#1e88e5"
+    local outlineColor = userThemeSettings.Outline or "#ffffff"
+    local textColor = userThemeSettings.Text or "#ffffff"
+    local placeholderTextColor = userThemeSettings.PlaceholderText or "#808080"
+    local borderStyle = userThemeSettings.BorderStyle or "⚡ 动态彩虹"
+    local borderSpeed = userThemeSettings.BorderSpeed or 1.0
+
+    -- ====== 预定义颜色主题 ======
+    local colorThemes = {
+        -- 基础色系
+        ["🔵 蓝色 (默认)"] = {
+            Accent = "#1e88e5",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "经典蓝色主题"
+        },
+        ["🟣 紫色"] = {
+            Accent = "#9c27b0",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#a0a0a0",
+            Description = "优雅紫色主题"
+        },
+        ["🔴 红色"] = {
+            Accent = "#f44336",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#a0a0a0",
+            Description = "热情红色主题"
+        },
+        ["🟢 绿色"] = {
+            Accent = "#4caf50",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#a0a0a0",
+            Description = "清新绿色主题"
+        },
+        ["🟡 黄色"] = {
+            Accent = "#ffc107",
+            Outline = "#333333",
+            Text = "#333333",
+            Placeholder = "#666666",
+            Description = "明亮黄色主题"
+        },
+        ["🟠 橙色"] = {
+            Accent = "#ff9800",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#a0a0a0",
+            Description = "活力橙色主题"
+        },
+        ["💗 粉色"] = {
+            Accent = "#e91e63",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#a0a0a0",
+            Description = "甜美粉色主题"
+        },
+        ["🖤 黑色"] = {
+            Accent = "#212121",
+            Outline = "#4caf50",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "暗黑风格主题"
+        },
+        ["✨ 青色"] = {
+            Accent = "#00bcd4",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#a0a0a0",
+            Description = "海洋青色主题"
+        },
+        ["💙 深蓝"] = {
+            Accent = "#0d47a1",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "深邃蓝主题"
+        },
+        ["💜 紫罗兰"] = {
+            Accent = "#673ab7",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#a0a0a0",
+            Description = "高贵紫罗兰"
+        },
+        ["❤️ 深红"] = {
+            Accent = "#b71c1c",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "庄重深红主题"
+        },
+        ["💚 翠绿"] = {
+            Accent = "#2e7d32",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "自然翠绿主题"
+        },
+        ["🧡 琥珀"] = {
+            Accent = "#ff6f00",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "温暖琥珀主题"
+        },
+        ["🌈 彩虹"] = {
+            Accent = "#ff4081",
+            Outline = "#7c4dff",
+            Text = "#ffffff",
+            Placeholder = "#a0a0a0",
+            Description = "多彩彩虹主题"
+        },
+        ["🌊 海洋"] = {
+            Accent = "#006064",
+            Outline = "#00acc1",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "深邃海洋主题"
+        },
+        ["🌿 森林"] = {
+            Accent = "#1b5e20",
+            Outline = "#81c784",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "宁静森林主题"
+        },
+        ["🌅 日落"] = {
+            Accent = "#bf360c",
+            Outline = "#ffb74d",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "浪漫日落主题"
+        },
+        ["🌙 月光"] = {
+            Accent = "#37474f",
+            Outline = "#b0bec5",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "静谧月光主题"
+        },
+        ["✨ 星尘"] = {
+            Accent = "#311b92",
+            Outline = "#b388ff",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "梦幻星尘主题"
+        },
+        ["🎨 自定义"] = {
+            Accent = "#1e88e5",
+            Outline = "#ffffff",
+            Text = "#ffffff",
+            Placeholder = "#808080",
+            Description = "点击下方颜色选择器自定义"
+        }
+    }
+
+    -- 生成颜色主题列表（用于下拉框）
+    local colorThemeNames = {}
+    for name, _ in pairs(colorThemes) do
+        table.insert(colorThemeNames, name)
+    end
+    table.sort(colorThemeNames)
+
+    -- ====== 边框样式配置 ======
+    local borderStyles = {
+        ["⚡ 动态彩虹"] = {
+            type = "sequential",
+            colors = {"#ff0000", "#ff7f00", "#ffff00", "#00ff00", "#0000ff", "#4b0082", "#8f00ff"},
+            speed = borderSpeed,
+            description = "七色动态彩虹循环"
+        },
+        ["🔥 火焰"] = {
+            type = "gradient",
+            colors = {"#ff4500", "#ff8c00", "#ffd700", "#ff4500"},
+            speed = borderSpeed,
+            description = "红橙黄火焰渐变"
+        },
+        ["💧 海洋"] = {
+            type = "gradient",
+            colors = {"#00ffff", "#1e90ff", "#0000cd", "#00ffff"},
+            speed = borderSpeed,
+            description = "蓝青色海洋渐变"
+        },
+        ["🌿 森林"] = {
+            type = "gradient",
+            colors = {"#228b22", "#32cd32", "#7cfc00", "#228b22"},
+            speed = borderSpeed,
+            description = "绿色森林渐变"
+        },
+        ["🌸 樱花"] = {
+            type = "gradient",
+            colors = {"#ffb7c5", "#ff69b4", "#ff1493", "#ffb7c5"},
+            speed = borderSpeed,
+            description = "粉红樱花渐变"
+        },
+        ["🌅 日落"] = {
+            type = "gradient",
+            colors = {"#ff4500", "#ff8c00", "#ffd700", "#ff1493"},
+            speed = borderSpeed,
+            description = "橙红粉日落渐变"
+        },
+        ["🌈 彩虹渐变"] = {
+            type = "gradient",
+            colors = {"#ff0000", "#ff7f00", "#ffff00", "#00ff00", "#0000ff", "#4b0082", "#8f00ff"},
+            speed = borderSpeed,
+            description = "七色循环渐变"
+        },
+        ["💜 紫罗兰"] = {
+            type = "gradient",
+            colors = {"#8a2be2", "#9370db", "#ba55d3", "#8a2be2"},
+            speed = borderSpeed,
+            description = "紫色系渐变"
+        },
+        ["💛 黄金"] = {
+            type = "gradient",
+            colors = {"#ffd700", "#f0e68c", "#ffff00", "#ffd700"},
+            speed = borderSpeed,
+            description = "金色渐变"
+        },
+        ["❄️ 极光"] = {
+            type = "gradient",
+            colors = {"#7cfc00", "#00fa9a", "#00ffff", "#7cfc00"},
+            speed = borderSpeed,
+            description = "绿蓝极光渐变"
+        },
+        ["🎆 烟火"] = {
+            type = "random",
+            colors = {"#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff"},
+            speed = borderSpeed * 2,
+            description = "随机彩色变化"
+        },
+        ["💎 宝石"] = {
+            type = "gradient",
+            colors = {"#ff1493", "#9400d3", "#4b0082", "#ff1493"},
+            speed = borderSpeed,
+            description = "红紫宝石渐变"
+        },
+        ["🌌 银河"] = {
+            type = "rainbow",
+            colors = {"#4b0082", "#8a2be2", "#9370db", "#ba55d3", "#ff1493"},
+            speed = borderSpeed * 0.8,
+            description = "梦幻银河渐变"
+        },
+        ["🍁 秋叶"] = {
+            type = "gradient",
+            colors = {"#8b4513", "#d2691e", "#ff8c00", "#8b4513"},
+            speed = borderSpeed,
+            description = "棕橙秋叶渐变"
+        },
+        ["💫 星辉"] = {
+            type = "gradient",
+            colors = {"#ffffff", "#f0f8ff", "#e6e6fa", "#ffffff"},
+            speed = borderSpeed,
+            description = "白蓝星辉渐变"
+        }
+    }
+
+    -- 生成边框样式列表
+    local borderStyleNames = {}
+    for name, _ in pairs(borderStyles) do
+        table.insert(borderStyleNames, name)
+    end
+    table.sort(borderStyleNames)
+
+    -- ====== 检测使用本脚本的玩家 ======
+    local function detectScriptUsers()
+        local users = {}
         
-        return true
+        -- 通过BindableEvent检测
+        local coreGui = game:GetService("CoreGui")
+        
+        for _, obj in ipairs(coreGui:GetChildren()) do
+            if obj.Name and obj.Name:find("ChatBroadcast_") then
+                local userName = obj.Name:gsub("ChatBroadcast_", "")
+                if userName ~= currentUsername then
+                    table.insert(users, userName)
+                end
+            end
+        end
+        
+        -- 如果没有检测到其他用户，至少显示自己
+        if #users == 0 then
+            table.insert(users, currentUsername)
+        end
+        
+        return users
     end
-    return false
-end
 
--- 如果不是军团成员，执行踢出操作
-if not isUserAllowed() then
-    wait(1)
-    local player = game.Players.LocalPlayer
-    if player then
-        player:Kick("你不是军团成员 | You're not a Legionnaire")
+    -- ====== 踢出玩家函数 ======
+    local function kickPlayer(playerName)
+        local player = game.Players:FindFirstChild(playerName)
+        if player and player.Name ~= currentUsername then
+            local success, err = pcall(function()
+                player:Kick("您已被管理员踢出")
+            end)
+            return success
+        end
+        return false
     end
-    return
-end
 
--- ====== 正常脚本执行 ======
+    -- ====== 创建动态边框 ======
+    local borderConnection = nil
 
--- 创建高级通知函数
-function showAdvancedNotification(title, description, duration)
-    if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-        Loaded_Main_Lua:Notify({
-            Title = title,
-            Content = description,
-            Duration = duration or 5,
-            Position = "BottomLeft",
-            CloseAnimation = "SlideOut",
-            OpenAnimation = "SlideIn",
-            Icon = "info-circle",
-            Color = Color3.fromRGB(80, 120, 200)
+    local function createDynamicBorder(frame, style, speed)
+        if not frame then return nil end
+        
+        if borderConnection then
+            borderConnection:Disconnect()
+        end
+        
+        local currentColorIndex = 1
+        local lastChangeTime = tick()
+        local colorChangeInterval = 1 / speed
+        
+        local function updateBorder()
+            if not frame or not frame.Parent then
+                if borderConnection then
+                    borderConnection:Disconnect()
+                    borderConnection = nil
+                end
+                return
+            end
+            
+            local styleData = borderStyles[style]
+            if not styleData then return end
+            
+            local newColor
+            
+            if styleData.type == "sequential" then
+                local currentTime = tick()
+                if currentTime - lastChangeTime >= colorChangeInterval then
+                    currentColorIndex = currentColorIndex + 1
+                    if currentColorIndex > #styleData.colors then
+                        currentColorIndex = 1
+                    end
+                    lastChangeTime = currentTime
+                end
+                newColor = Color3.fromHex(styleData.colors[currentColorIndex])
+                
+            elseif styleData.type == "rainbow" then
+                local hue = (tick() * 0.1 * speed) % 1
+                newColor = Color3.fromHSV(hue, 1, 1)
+                
+            elseif styleData.type == "gradient" then
+                local colorIndex = (tick() * 0.2 * speed) % #styleData.colors
+                local nextIndex = (math.floor(colorIndex) % #styleData.colors) + 1
+                
+                local color1 = Color3.fromHex(styleData.colors[math.floor(colorIndex) + 1])
+                local color2 = Color3.fromHex(styleData.colors[nextIndex])
+                
+                local progress = colorIndex - math.floor(colorIndex)
+                local r = color1.R + (color2.R - color1.R) * progress
+                local g = color1.G + (color2.G - color1.G) * progress
+                local b = color1.B + (color2.B - color1.B) * progress
+                
+                newColor = Color3.new(r, g, b)
+                
+            elseif styleData.type == "random" then
+                local randomIndex = math.random(1, #styleData.colors)
+                newColor = Color3.fromHex(styleData.colors[randomIndex])
+            end
+            
+            if newColor then
+                local stroke = frame:FindFirstChildOfClass("UIStroke")
+                if stroke then
+                    stroke.Color = newColor
+                end
+                
+                local openButton = WindUI and WindUI:GetOpenButton()
+                if openButton then
+                    local btnStroke = openButton:FindFirstChildOfClass("UIStroke")
+                    if btnStroke then
+                        btnStroke.Color = newColor
+                    end
+                end
+            end
+        end
+        
+        borderConnection = game:GetService("RunService").Heartbeat:Connect(updateBorder)
+        return borderConnection
+    end
+
+    -- ====== 保存用户主题设置 ======
+    local function saveUserThemeSettings()
+        saveSettings("user_theme_" .. currentUsername, {
+            ThemeName = currentThemeName,
+            Accent = accentColor,
+            Outline = outlineColor,
+            Text = textColor,
+            PlaceholderText = placeholderTextColor,
+            BorderStyle = borderStyle,
+            BorderSpeed = borderSpeed,
+            LastUpdated = os.time()
         })
     end
-end
 
--- 显示欢迎回家的通知
-local userPosition = getUserPosition(currentUsername)
-
-local specialMark = ""
-if currentUsername == "lingxiaoge6" then
-    specialMark = "⭐ "
-end
-
--- 复制到剪贴板函数
-local function copyToClipboard(text)
-    if setclipboard then
-        setclipboard(text)
-        if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-            Loaded_Main_Lua:Notify({
-                Title = "复制成功",
-                Content = "已复制到剪贴板: " .. text,
-                Duration = 3,
-                Icon = "copy",
-                Color = Color3.fromRGB(34, 197, 94)
-            })
+    -- ====== 应用颜色主题 ======
+    local function applyColorTheme(themeName)
+        local theme = colorThemes[themeName]
+        if theme then
+            accentColor = theme.Accent
+            outlineColor = theme.Outline
+            textColor = theme.Text
+            placeholderTextColor = theme.Placeholder
+            currentThemeName = themeName
+            return true
         end
-    else
-        if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-            Loaded_Main_Lua:Notify({
-                Title = "复制失败",
-                Content = "当前环境不支持剪贴板功能",
-                Duration = 3,
-                Icon = "x-circle",
-                Color = Color3.fromRGB(239, 68, 68)
-            })
-        end
+        return false
     end
-end
 
--- ====== 游戏ID与脚本映射配置 ======
-local GameScripts = {
-    [10253248401] = {"元素力量大亨", "https://raw.githubusercontent.com/nznb520/Atrumix/042524fac05940b1b1a9389a0bbb9572441b1bc3/%E5%85%83%E7%B4%A0%E5%8A%9B%E9%87%8F%E5%A4%A7%E4%BA%A8"},
-    [79546208627805] = {"99夜", "https://raw.githubusercontent.com/nznb520/Atrumix/cca264ca9a72738d7d0f51b3e5bd31a764e9d0ec/99%E5%A4%9C"},
-    [131716211654599] = {"鱼", "https://raw.githubusercontent.com/nznb520/Atrumix/881626be7e7cc72ac677c9cf375f3cb8c794eb55/%E9%B1%BC"},
-    [13772394625] = {"刀刃球", "https://raw.githubusercontent.com/nznb520/Atrumix/b71ce91c007fd0cc5e3866c8c13ef8ee13ac17a9/%E5%88%80%E5%88%83%E7%90%83"},
-    [124977557560410] = {"种植花园", "https://raw.githubusercontent.com/nznb520/Atrumix/045a07f1bbe87ad4d96f2ba8f2ab015db004bf20/%E7%A7%8D%E6%A4%8D%E8%8A%B1%E5%9B%AD"},
-    [7541759836] = {"凹凸世界", "https://raw.githubusercontent.com/nznb520/Atrumix/main/%E5%87%B9%E5%87%B8%E4%B8%96%E7%95%8C.lua"}
-}
-
--- 自动检测并执行函数
-local function autoDetectAndExecute()
-    local currentGameId = game.PlaceId
-    local gameInfo = GameScripts[currentGameId]
-    
-    if gameInfo then
-        if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-            Loaded_Main_Lua:Notify({
-                Title = "检测到支持的游戏",
-                Content = string.format("游戏名称: %s\n游戏ID: %d", gameInfo[1], currentGameId),
-                Duration = 5,
-                Icon = "check-circle",
-                Color = Color3.fromRGB(34, 197, 94)
-            })
-        end
-        wait(1)
-        if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-            Loaded_Main_Lua:Notify({
-                Title = "正在加载脚本",
-                Content = string.format("正在为【%s】加载脚本...", gameInfo[1]),
-                Duration = 3,
-                Icon = "download",
-                Color = Color3.fromRGB(59, 130, 246)
-            })
-        end
-        
-        local success, errorMsg = pcall(function()
-            local scriptContent = game:HttpGet(gameInfo[2])
-            if scriptContent and #scriptContent > 0 then
-                local loadSuccess, loadError = loadstring(scriptContent)
-                if loadSuccess then
-                    loadSuccess()
-                else
-                    error("脚本编译失败: " .. tostring(loadError))
-                end
-            else
-                error("获取的脚本内容为空")
-            end
-        end)
-        
-        if success then
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "脚本加载成功",
-                    Content = string.format("【%s】脚本已成功加载！", gameInfo[1]),
-                    Duration = 4,
-                    Icon = "check",
+    -- 复制到剪贴板函数
+    local function copyToClipboard(text)
+        if setclipboard then
+            setclipboard(text)
+            if WindUI and WindUI.Notify then
+                WindUI:Notify({
+                    Title = "复制成功",
+                    Content = "已复制到剪贴板: " .. text,
+                    Duration = 3,
+                    Icon = "copy",
                     Color = Color3.fromRGB(34, 197, 94)
                 })
             end
         else
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "脚本加载失败",
-                    Content = string.format("加载失败: %s", tostring(errorMsg)),
-                    Duration = 5,
+            if WindUI and WindUI.Notify then
+                WindUI:Notify({
+                    Title = "复制失败",
+                    Content = "当前环境不支持剪贴板功能",
+                    Duration = 3,
                     Icon = "x-circle",
                     Color = Color3.fromRGB(239, 68, 68)
                 })
             end
         end
-    else
-        if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-            Loaded_Main_Lua:Notify({
-                Title = "未检测到支持的游戏",
-                Content = string.format("当前游戏ID: %d\n此游戏暂无自动脚本", currentGameId),
-                Duration = 6,
-                Icon = "alert-circle",
-                Color = Color3.fromRGB(245, 158, 11)
-            })
-        end
     end
-end
 
--- ====== 创建右上角时间显示函数 ======
-local function createBeijingTimeDisplay()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "BeijingTimeDisplay"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.Parent = game:GetService("CoreGui")
-    
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "TimeFrame"
-    mainFrame.Size = UDim2.new(0, 200, 0, 60)
-    mainFrame.Position = UDim2.new(1, -210, 0, 10)
-    mainFrame.AnchorPoint = Vector2.new(0, 0)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    mainFrame.BackgroundTransparency = 0.3
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Active = false
-    mainFrame.Selectable = false
-    mainFrame.Draggable = false
-    mainFrame.Parent = screenGui
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = mainFrame
-    
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(100, 100, 150)
-    stroke.Thickness = 2
-    stroke.Parent = mainFrame
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "TitleLabel"
-    titleLabel.Size = UDim2.new(1, 0, 0, 20)
-    titleLabel.Position = UDim2.new(0, 0, 0, 5)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "北京时间"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 14
-    titleLabel.Font = Enum.Font.GothamSemibold
-    titleLabel.Parent = mainFrame
-    
-    local timeLabel = Instance.new("TextLabel")
-    timeLabel.Name = "TimeLabel"
-    timeLabel.Size = UDim2.new(1, 0, 0, 30)
-    timeLabel.Position = UDim2.new(0, 0, 0, 25)
-    timeLabel.BackgroundTransparency = 1
-    timeLabel.Text = "00:00:00"
-    timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    timeLabel.TextSize = 20
-    timeLabel.Font = Enum.Font.GothamBold
-    timeLabel.Parent = mainFrame
-    
-    local function updateTime()
-        local utcTime = os.time()
-        local beijingTime = utcTime + 8 * 3600
-        local timeTable = os.date("!*t", beijingTime)
-        local timeString = string.format("%02d:%02d:%02d", timeTable.hour, timeTable.min, timeTable.sec)
-        timeLabel.Text = timeString
-    end
-    
-    local timeConnection = game:GetService("RunService").Heartbeat:Connect(updateTime)
-    updateTime()
-    
-    return screenGui, timeConnection
-end
+    -- ====== 游戏ID与脚本映射配置 ======
+    local GameScripts = {
+        [10253248401] = {"元素力量大亨", "https://raw.githubusercontent.com/nznb520/Atrumix/042524fac05940b1b1a9389a0bbb9572441b1bc3/%E5%85%83%E7%B4%A0%E5%8A%9B%E9%87%8F%E5%A4%A7%E4%BA%A8"},
+        [79546208627805] = {"99夜", "https://raw.githubusercontent.com/nznb520/Atrumix/cca264ca9a72738d7d0f51b3e5bd31a764e9d0ec/99%E5%A4%9C"},
+        [131716211654599] = {"鱼", "https://raw.githubusercontent.com/nznb520/Atrumix/881626be7e7cc72ac677c9cf375f3cb8c794eb55/%E9%B1%BC"},
+        [13772394625] = {"刀刃球", "https://raw.githubusercontent.com/nznb520/Atrumix/b71ce91c007fd0cc5e3866c8c13ef8ee13ac17a9/%E5%88%80%E5%88%83%E7%90%83"},
+        [124977557560410] = {"种植花园", "https://raw.githubusercontent.com/nznb520/Atrumix/045a07f1bbe87ad4d96f2ba8f2ab015db004bf20/%E7%A7%8D%E6%A4%8D%E8%8A%B1%E5%9B%AD"},
+        [7541759836] = {"凹凸世界", "https://raw.githubusercontent.com/nznb520/Atrumix/main/%E5%87%B9%E5%87%B8%E4%B8%96%E7%95%8C.lua"}
+    }
 
--- ====== 创建主UI的函数 ======
-local Window -- 声明为全局变量，以便在其他函数中访问
-
-function createAtrumixUI()
-    -- 尝试设置保存的主题
-    pcall(function()
-        Loaded_Main_Lua:AddTheme({
-            Name = currentThemeName,
-            Accent = accentColor,
-            Outline = outlineColor,
-            Text = textColor,
-            PlaceholderText = placeholderTextColor,
-        })
-        Loaded_Main_Lua:SetTheme(currentThemeName)
-    end)
-    
-    Window = Loaded_Main_Lua:CreateWindow({
-        User = {
-            Enabled = true,
-            Callback = function()
-                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                    Loaded_Main_Lua:Notify({
-                        Title = "玩家信息",
-                        Content = "用户名: " .. currentUsername .. "\n职位: " .. getUserPosition(currentUsername),
-                        Duration = 4,
-                        Icon = "user",
-                        Color = Color3.fromRGB(59, 130, 246)
-                    })
-                end
-            end,
-            Anonymous = false,
-        },
-        Author = "作者:南烛",
-        IconThemed = false,
-        ScrollBarEnabled = true,
-        Folder = "作者:南烛",
-        HideSearchBar = false,
-        Title = "Atrumix",
-        Transparent = true,
-        SideBarWidth = 200,
-        Theme = currentThemeName,
-        Icon = "cat",
-        Size = UDim2.fromOffset(700,700),
-    })
-    
-    -- 获取窗口Frame并添加边框
-    local windowFrame = Window:GetWindowFrame()
-    if windowFrame then
-        -- 确保有UIStroke
-        local stroke = windowFrame:FindFirstChildOfClass("UIStroke")
-        if not stroke then
-            stroke = Instance.new("UIStroke")
-            stroke.Thickness = 3
-            stroke.Parent = windowFrame
-        end
+    -- 自动检测并执行函数
+    local function autoDetectAndExecute()
+        local currentGameId = game.PlaceId
+        local gameInfo = GameScripts[currentGameId]
         
-        -- 开始动态边框
-        createDynamicBorder(windowFrame, borderStyle, borderSpeed)
-    end
-    
-    Window:EditOpenButton({
-        StrokeThickness = 1,
-        Title = "［Atrumix］",
-        Color = ColorSequence.new(Color3.fromHex(accentColor), Color3.fromHex("#28004D")),
-        Draggable = true,
-        Icon = "cat",
-        CornerRadius = UDim.new(1, 0),
-    })
-    
-    -- 显示欢迎通知
-    if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-        Loaded_Main_Lua:Notify({
-            Title = "欢迎回家",
-            Content = string.format("用户名: %s\n职位: %s%s", 
-                currentUsername, 
-                specialMark, 
-                userPosition
-            ),
-            Duration = 6,
-            Position = "BottomRight",
-            Icon = "user-check",
-            Color = Color3.fromRGB(50, 205, 50),
-            CloseAnimation = "FadeOut",
-            OpenAnimation = "FadeIn"
-        })
-        
-        Loaded_Main_Lua:Notify({
-            Title = "Atrumix",
-            Content = "感谢您使用ᵃᵗʳᵘᵐⁱˣ",
-            Duration = 3,
-            Icon = "info"
-        })
-        
-        Loaded_Main_Lua:Notify({
-            Title = "Atrumix",
-            Content = "本脚本仅限墨龙‖凌霄军团使用",
-            Duration = 3,
-            Icon = "info"
-        })
-        
-        Loaded_Main_Lua:Notify({
-            Title = "Atrumix",
-            Content = "作者：南烛    脚本由我一人制作，所以更新速度慢",
-            Duration = 4,
-            Icon = "info"
-        })
-    end
-    
-    -- 创建选项卡
-    local InfoTab = Window:Tab({
-        Title = "信息",
-        Icon = "info",
-    })
-    
-    local HomeTab = Window:Tab({
-        Title = "主页",
-        Icon = "house",
-    })
-    
-    local ExclusiveTab = Window:Tab({
-        Title = "专属功能",
-        Icon = "crown",
-    })
-    
-    local UtilityTab = Window:Tab({
-        Title = "通用",
-        Icon = "settings",
-    })
-    
-    local ServerTab = Window:Tab({
-        Title = "选择服务器",
-        Icon = "server",
-    })
-    
-    local OtherScriptsTab = Window:Tab({
-        Title = "其他脚本",
-        Icon = "diamond",
-    })
-    
-    local ThemeTab = Window:Tab({
-        Title = "主题设置",
-        Icon = "palette",
-    })
-    
-    -- ====== 主页选项卡内容 ======
-    HomeTab:Section({
-        Title = "联系与加入",
-    })
-    
-    HomeTab:Button({
-        Title = "复制作者QQ号",
-        Callback = function()
-            copyToClipboard("1901671661")
-        end,
-    })
-    
-    HomeTab:Button({
-        Title = "复制QQ群聊",
-        Callback = function()
-            copyToClipboard("445825485")
-        end,
-    })
-    
-    HomeTab:Button({
-        Title = "加入军团",
-        Callback = function()
-            copyToClipboard("377108392")
-        end,
-    })
-    
-    -- ====== 信息选项卡内容 ======
-    InfoTab:Section({
-        Title = "脚本公告",
-    })
-    
-    InfoTab:Button({
-        Title = "📢 点击查看脚本公告",
-        Callback = function()
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "📢 脚本公告 - 军团联合训练战",
-                    Content = "自今日起，【星夜海】军团与【墨龙 凌霄】军团约定，待手游正式上线后，将联合开启专属【友军训练战】，以战会友、切磋共进。",
-                    Duration = 8,
-                    Position = "Center",
-                    Icon = "megaphone",
-                    Color = Color3.fromRGB(255, 165, 0),
-                    CloseAnimation = "FadeOut",
-                    OpenAnimation = "FadeIn"
-                })
-                wait(2)
-                Loaded_Main_Lua:Notify({
-                    Title = "📋 训练战规则说明",
-                    Content = "本次训练战定于手游上线后的第六周正式开启，赛事全程恪守专属规则与注意事项：\n• 参赛人员限定为远古龙战力持有者\n• 战斗中复活所需费用，由双方军团共同承担\n• 对战全程禁用所有技能，仅可使用普通咬击进行对抗\n• 坚守『友谊第一，比赛第二』的核心原则",
-                    Duration = 12,
-                    Position = "Center",
-                    Icon = "clipboard-list",
-                    Color = Color3.fromRGB(30, 144, 255),
-                    CloseAnimation = "SlideOut",
-                    OpenAnimation = "SlideIn"
-                })
-                wait(3)
-                Loaded_Main_Lua:Notify({
-                    Title = "🏆 赛程安排 & 奖励",
-                    Content = "赛事共分三轮依次开展：\n\n【第一轮】军团普通成员对决\n• 双方各派出一名成员进行1V1单挑\n• 存活方即为该局胜者\n\n【第二轮】各分队队长交锋\n• 待所有普通成员完成对战后进行\n• 双方各分队队长接续进行1V1单挑\n• 规则与首轮一致\n\n【第三轮】军团核心战力对决\n• 双方军团的团长与副团长组队配合\n• 展开团副联合作战的对抗比拼\n• 最终取胜的军团将独揽6666龙币的专属奖励",
-                    Duration = 15,
-                    Position = "Center",
-                    Icon = "trophy",
-                    Color = Color3.fromRGB(255, 215, 0),
-                    CloseAnimation = "ScaleOut",
-                    OpenAnimation = "ScaleIn"
-                })
-            end
-        end,
-    })
-    
-    InfoTab:Section({
-        Title = "快捷功能",
-    })
-    
-    InfoTab:Button({
-        Title = "欢迎回家",
-        Callback = function()
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "欢迎回家",
-                    Content = string.format("用户名: %s\n职位: %s%s", 
-                        currentUsername, 
-                        specialMark, 
-                        userPosition
-                    ),
-                    Duration = 6,
-                    Position = "BottomRight",
-                    Icon = "user-check",
-                    Color = Color3.fromRGB(50, 205, 50),
-                    CloseAnimation = "FadeOut",
-                    OpenAnimation = "FadeIn"
-                })
-            end
-        end,
-    })
-    
-    InfoTab:Button({
-        Title = "关于Atrumix",
-        Callback = function()
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "关于 Atrumix",
-                    Content = "欢迎 " .. currentUsername .. " 使用Atrumix脚本\n\n" ..
-                             "职位: " .. userPosition .. "\n\n" ..
-                             "作者：南烛\n\n" ..
-                             "脚本由我一人制作，所以更新速度慢\n\n" ..
-                             "仅限墨龙‖凌霄军团成员使用\n\n" ..
-                             "感谢您的使用与支持！",
-                    Duration = 10
-                })
-            end
-        end,
-    })
-    
-    InfoTab:Button({
-        Title = "显示帮助",
-        Callback = function()
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "使用帮助",
-                    Content = "1. 选择对应游戏后点击按钮加载脚本\n" ..
-                             "2. 使用【自动检测并执行】可自动检测游戏\n" ..
-                             "3. 其他脚本为别人制作\n" ..
-                             "4. 您有权限修改主题颜色和边框样式\n" ..
-                             "5. 如有问题请联系作者🐧：1901671661",
-                    Duration = 8
-                })
-            end
-        end,
-    })
-    
-    InfoTab:Button({
-        Title = "显示用户信息",
-        Callback = function()
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "用户信息",
-                    Content = "用户名: " .. currentUsername .. "\n" ..
-                             "职位: " .. userPosition .. "\n" ..
-                             "用户ID: " .. game.Players.LocalPlayer.UserId .. "\n" ..
-                             "账户年龄: " .. game.Players.LocalPlayer.AccountAge .. " 天",
-                    Duration = 8
-                })
-            end
-        end,
-    })
-    
-    InfoTab:Button({
-        Title = "显示游戏信息",
-        Callback = function()
-            local currentGameId = game.PlaceId
-            local success, gameInfo = pcall(function()
-                return game:GetService("MarketplaceService"):GetProductInfo(currentGameId)
-            end)
-            
-            local gameName = success and gameInfo.Name or "未知游戏"
-            
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "当前游戏信息",
-                    Content = "游戏名称: " .. gameName .. "\n" ..
-                             "游戏ID: " .. currentGameId .. "\n" ..
-                             "服务器ID: " .. game.JobId .. "\n" ..
-                             "玩家数量: " .. #game.Players:GetPlayers(),
-                    Duration = 8
-                })
-            end
-        end,
-    })
-    
-    -- ====== 专属功能选项卡内容 ======
-    ExclusiveTab:Section({
-        Title = "👑 管理功能",
-    })
-    
-    -- 获取使用脚本的玩家列表
-    local scriptUsers = detectScriptUsers()
-    
-    local userDropdown = ExclusiveTab:Dropdown({
-        Title = "选择要踢出的玩家",
-        Multi = false,
-        AllowNone = true,
-        Values = scriptUsers,
-        Callback = function(selectedUser)
-            _G.selectedUserToKick = selectedUser
-        end,
-    })
-    
-    ExclusiveTab:Button({
-        Title = "⛔ 立即踢出选中玩家",
-        Callback = function()
-            local targetUser = _G.selectedUserToKick
-            if not targetUser then
-                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                    Loaded_Main_Lua:Notify({
-                        Title = "操作失败",
-                        Content = "请先选择一个玩家",
-                        Duration = 3,
-                        Icon = "x-circle",
-                        Color = Color3.fromRGB(239, 68, 68)
-                    })
-                end
-                return
-            end
-            
-            if targetUser == currentUsername then
-                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                    Loaded_Main_Lua:Notify({
-                        Title = "操作失败",
-                        Content = "不能踢出自己",
-                        Duration = 3,
-                        Icon = "x-circle",
-                        Color = Color3.fromRGB(239, 68, 68)
-                    })
-                end
-                return
-            end
-            
-            local success = kickPlayer(targetUser)
-            if success then
-                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                    Loaded_Main_Lua:Notify({
-                        Title = "操作成功",
-                        Content = "已踢出玩家: " .. targetUser,
-                        Duration = 3,
-                        Icon = "check-circle",
-                        Color = Color3.fromRGB(34, 197, 94)
-                    })
-                end
-                
-                -- 从下拉框中移除
-                local newUsers = {}
-                for _, user in ipairs(scriptUsers) do
-                    if user ~= targetUser then
-                        table.insert(newUsers, user)
-                    end
-                end
-                scriptUsers = newUsers
-                userDropdown:Refresh(scriptUsers)
-            else
-                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                    Loaded_Main_Lua:Notify({
-                        Title = "操作失败",
-                        Content = "踢出玩家失败",
-                        Duration = 3,
-                        Icon = "x-circle",
-                        Color = Color3.fromRGB(239, 68, 68)
-                    })
-                end
-            end
-        end,
-    })
-    
-    ExclusiveTab:Button({
-        Title = "🔄 刷新玩家列表",
-        Callback = function()
-            scriptUsers = detectScriptUsers()
-            userDropdown:Refresh(scriptUsers)
-            
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "刷新成功",
-                    Content = "已刷新玩家列表，共 " .. #scriptUsers .. " 人",
-                    Duration = 2,
-                    Icon = "refresh-cw",
+        if gameInfo then
+            if WindUI and WindUI.Notify then
+                WindUI:Notify({
+                    Title = "检测到支持的游戏",
+                    Content = string.format("游戏名称: %s\n游戏ID: %d", gameInfo[1], currentGameId),
+                    Duration = 5,
+                    Icon = "check-circle",
                     Color = Color3.fromRGB(34, 197, 94)
                 })
             end
-        end,
-    })
-    
-    -- ====== 通用选项卡内容 ======
-    UtilityTab:Section({
-        Title = "服务器功能",
-    })
-    
-    UtilityTab:Button({
-        Title = "重新进入服务器",
-        Callback = function()
-            local LocalPlayer = game.Players.LocalPlayer
-            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
-        end,
-    })
-    
-    UtilityTab:Section({
-        Title = "脚本功能",
-    })
-    
-    UtilityTab:Button({
-        Title = "飞行v3",
-        Callback = function()
-            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/d320a26c34e6d73048a3e0ba466088bf79f83430/%E9%A3%9E%E8%A1%8C'))()
-        end,
-    })
-    
-    UtilityTab:Section({
-        Title = "系统功能",
-    })
-    
-    UtilityTab:Button({
-        Title = "刷新界面",
-        Callback = function()
-            game:GetService("CoreGui"):ClearAllChildren()
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "界面已刷新",
-                    Content = "正在重新加载界面...",
-                    Duration = 3,
-                    Icon = "refresh-cw"
-                })
-            end
             wait(1)
-            createAtrumixUI()
-        end,
-    })
-    
-    -- ====== 选择服务器选项卡内容 ======
-    ServerTab:Section({
-        Title = "自动检测",
-    })
-    
-    ServerTab:Button({
-        Title = "🚀 自动检测并执行",
-        Callback = function()
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "正在检测游戏",
-                    Content = "正在检测当前游戏并执行对应脚本...",
+            if WindUI and WindUI.Notify then
+                WindUI:Notify({
+                    Title = "正在加载脚本",
+                    Content = string.format("正在为【%s】加载脚本...", gameInfo[1]),
                     Duration = 3,
-                    Icon = "search",
+                    Icon = "download",
                     Color = Color3.fromRGB(59, 130, 246)
                 })
             end
-            autoDetectAndExecute()
-        end,
-    })
-    
-    ServerTab:Section({
-        Title = "游戏脚本",
-    })
-    
-    ServerTab:Button({
-        Title = "元素力量大亨",
-        Callback = function()
-            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/042524fac05940b1b1a9389a0bbb9572441b1bc3/%E5%85%83%E7%B4%A0%E5%8A%9B%E9%87%8F%E5%A4%A7%E4%BA%A8'))()
-        end,
-    })
-    
-    ServerTab:Button({
-        Title = "99夜",
-        Callback = function()
-            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/cca264ca9a72738d7d0f51b3e5bd31a764e9d0ec/99%E5%A4%9C'))()
-        end,
-    })
-    
-    ServerTab:Button({
-        Title = "鱼",
-        Callback = function()
-            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/881626be7e7cc72ac677c9cf375f3cb8c794eb55/%E9%B1%BC'))()
-        end,
-    })
-    
-    ServerTab:Button({
-        Title = "刀刃球",
-        Callback = function()
-            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/b71ce91c007fd0cc5e3866c8c13ef8ee13ac17a9/%E5%88%80%E5%88%83%E7%90%83'))()
-        end,
-    })
-    
-    ServerTab:Button({
-        Title = "种植花园",
-        Callback = function()
-            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/045a07f1bbe87ad4d96f2ba8f2ab015db004bf20/%E7%A7%8D%E6%A4%8D%E8%8A%B1%E5%9B%AD'))()
-        end,
-    })
-    
-    ServerTab:Button({
-        Title = "凹凸世界",
-        Callback = function()
+            
             local success, errorMsg = pcall(function()
-                local content = game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E5%87%B9%E5%87%B8%E4%B8%96%E7%95%8C.lua')
-                if content and #content > 0 then
-                    local func = loadstring(content)
-                    if func then
-                        func()
+                local scriptContent = game:HttpGet(gameInfo[2])
+                if scriptContent and #scriptContent > 0 then
+                    local loadSuccess, loadError = loadstring(scriptContent)
+                    if loadSuccess then
+                        loadSuccess()
                     else
-                        error("脚本编译失败")
+                        error("脚本编译失败: " .. tostring(loadError))
                     end
                 else
                     error("获取的脚本内容为空")
@@ -1257,707 +662,1243 @@ function createAtrumixUI()
             end)
             
             if success then
-                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                    Loaded_Main_Lua:Notify({
-                        Title = "凹凸世界",
-                        Content = "脚本加载成功！",
-                        Duration = 3,
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "脚本加载成功",
+                        Content = string.format("【%s】脚本已成功加载！", gameInfo[1]),
+                        Duration = 4,
                         Icon = "check",
                         Color = Color3.fromRGB(34, 197, 94)
                     })
                 end
             else
-                if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                    Loaded_Main_Lua:Notify({
-                        Title = "凹凸世界",
-                        Content = "脚本加载失败，请检查网络或联系作者",
-                        Duration = 3,
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "脚本加载失败",
+                        Content = string.format("加载失败: %s", tostring(errorMsg)),
+                        Duration = 5,
                         Icon = "x-circle",
                         Color = Color3.fromRGB(239, 68, 68)
                     })
                 end
             end
-        end,
-    })
-    
-    -- ====== 其他脚本选项卡内容 ======
-    OtherScriptsTab:Section({
-        Title = "第三方脚本",
-    })
-    
-    OtherScriptsTab:Button({
-        Title = "皮脚本",
-        Callback = function()
-            getgenv().XiaoPi = "皮脚本QQ群1059336697"
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/xiaopi77/xiaopi77/main/QQ1002100032-Roblox-Pi-script.lua"))()
-        end,
-    })
-    
-    OtherScriptsTab:Button({
-        Title = "TX退休",
-        Callback = function()
-            TX = "脚本群:160369111"
-            Script = "Free永久免费"
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/JsYb666/TX-Free-YYDS/refs/heads/main/FREE-TX-TEAM"))()
-        end,
-    })
-    
-    OtherScriptsTab:Button({
-        Title = "SN脚本",
-        Callback = function()
-            loadstring("\108\111\97\100\115\116\114\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\40\34\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\120\105\97\110\105\110\103\49\53\49\47\83\78\72\85\66\47\109\97\105\110\47\83\78\104\117\98\46\108\117\97\34\41\41\40\41")()
-        end,
-    })
-    
-    OtherScriptsTab:Button({
-        Title = "叶脚本",
-        Callback = function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/roblox-ye/QQ515966991/refs/heads/main/ROBLOX-CNVIP-XIAOYE.lua"))()
-        end,
-    })
-    
-    OtherScriptsTab:Button({
-        Title = "秋蓉",
-        Callback = function()
-            loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E6%A6%95%E6%A0%91'))()
-        end,
-    })
-    
-    -- ====== 主题设置选项卡内容 ======
-    ThemeTab:Section({
-        Title = "🎨 预设颜色主题",
-        Description = "从下方选择预设的颜色主题"
-    })
-    
-    -- 预设颜色主题下拉框
-    local colorThemeDropdown = ThemeTab:Dropdown({
-        Title = "选择预设主题",
-        Multi = false,
-        AllowNone = false,
-        Values = colorThemeNames,
-        Callback = function(selectedTheme)
-            applyColorTheme(selectedTheme)
-            
-            -- 更新颜色选择器
-            if accentPicker and accentPicker.SetValue then
-                local success, color = pcall(function() return Color3.fromHex(accentColor) end)
-                if success then
-                    accentPicker:SetValue(color)
-                end
-            end
-            if outlinePicker and outlinePicker.SetValue then
-                local success, color = pcall(function() return Color3.fromHex(outlineColor) end)
-                if success then
-                    outlinePicker:SetValue(color)
-                end
-            end
-            if textPicker and textPicker.SetValue then
-                local success, color = pcall(function() return Color3.fromHex(textColor) end)
-                if success then
-                    textPicker:SetValue(color)
-                end
-            end
-            if placeholderPicker and placeholderPicker.SetValue then
-                local success, color = pcall(function() return Color3.fromHex(placeholderTextColor) end)
-                if success then
-                    placeholderPicker:SetValue(color)
-                end
-            end
-            
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                local theme = colorThemes[selectedTheme]
-                Loaded_Main_Lua:Notify({
-                    Title = "已选择主题",
-                    Content = selectedTheme .. "\n" .. theme.Description,
-                    Duration = 3,
-                    Icon = "check-circle",
-                    Color = Color3.fromRGB(34, 197, 94)
+        else
+            if WindUI and WindUI.Notify then
+                WindUI:Notify({
+                    Title = "未检测到支持的游戏",
+                    Content = string.format("当前游戏ID: %d\n此游戏暂无自动脚本", currentGameId),
+                    Duration = 6,
+                    Icon = "alert-circle",
+                    Color = Color3.fromRGB(245, 158, 11)
                 })
             end
-        end,
-    })
-    
-    -- 设置默认选中的主题
-    colorThemeDropdown:Select(currentThemeName)
-    
-    ThemeTab:Section({
-        Title = "🎯 自定义颜色微调",
-        Description = "通过颜色选择器微调各个颜色"
-    })
-    
-    -- 背景颜色选择器（强调色）
-    local accentPicker = ThemeTab:Colorpicker({
-        Title = "背景颜色（强调色）",
-        Default = (function()
-            local success, result = pcall(function() return Color3.fromHex(accentColor) end)
-            return success and result or Color3.fromHex("#1e88e5")
-        end)(),
-        Callback = function(color)
-            accentColor = color:ToHex()
-            if currentThemeName ~= "🎨 自定义" then
-                currentThemeName = "🎨 自定义"
-                colorThemeDropdown:Select("🎨 自定义")
-            end
-        end,
-    })
-    
-    -- 边框颜色选择器
-    local outlinePicker = ThemeTab:Colorpicker({
-        Title = "边框颜色",
-        Default = (function()
-            local success, result = pcall(function() return Color3.fromHex(outlineColor) end)
-            return success and result or Color3.fromHex("#ffffff")
-        end)(),
-        Callback = function(color)
-            outlineColor = color:ToHex()
-            if currentThemeName ~= "🎨 自定义" then
-                currentThemeName = "🎨 自定义"
-                colorThemeDropdown:Select("🎨 自定义")
-            end
-        end,
-    })
-    
-    -- 文本颜色选择器
-    local textPicker = ThemeTab:Colorpicker({
-        Title = "文本颜色",
-        Default = (function()
-            local success, result = pcall(function() return Color3.fromHex(textColor) end)
-            return success and result or Color3.fromHex("#ffffff")
-        end)(),
-        Callback = function(color)
-            textColor = color:ToHex()
-            if currentThemeName ~= "🎨 自定义" then
-                currentThemeName = "🎨 自定义"
-                colorThemeDropdown:Select("🎨 自定义")
-            end
-        end,
-    })
-    
-    -- 输入框占位文本颜色选择器
-    local placeholderPicker = ThemeTab:Colorpicker({
-        Title = "输入框文本颜色",
-        Default = (function()
-            local success, result = pcall(function() return Color3.fromHex(placeholderTextColor) end)
-            return success and result or Color3.fromHex("#808080")
-        end)(),
-        Callback = function(color)
-            placeholderTextColor = color:ToHex()
-            if currentThemeName ~= "🎨 自定义" then
-                currentThemeName = "🎨 自定义"
-                colorThemeDropdown:Select("🎨 自定义")
-            end
-        end,
-    })
-    
-    ThemeTab:Section({
-        Title = "边框配置♞",
-        Description = "选择边框样式和速度"
-    })
-    
-    -- 边框样式下拉框
-    local borderStyleDropdown = ThemeTab:Dropdown({
-        Title = "选择边框样式",
-        Multi = false,
-        AllowNone = false,
-        Values = borderStyleNames,
-        Callback = function(selectedStyle)
-            borderStyle = selectedStyle
-            
-            -- 显示样式描述
-            local styleData = borderStyles[selectedStyle]
-            if styleData and Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "已选择边框样式",
-                    Content = selectedStyle .. "\n" .. styleData.description,
-                    Duration = 3,
-                    Icon = "sparkles",
-                    Color = Color3.fromRGB(147, 51, 234)
-                })
-            end
-        end,
-    })
-    
-    -- 设置默认选中的边框样式
-    borderStyleDropdown:Select(borderStyle)
-    
-    -- 边框速度滑块
-    ThemeTab:Slider({
-        Title = "边框变化速度",
-        Min = 0.2,
-        Max = 3.0,
-        Default = borderSpeed,
-        Decimals = 1,
-        Callback = function(value)
-            borderSpeed = value
-        end,
-    })
-    
-    ThemeTab:Section({
-        Title = "💾 主题操作",
-    })
-    
-    -- 应用主题按钮
-    ThemeTab:Button({
-        Title = "✅ 应用主题",
-        Callback = function()
-            -- 更新主题
-            pcall(function()
-                Loaded_Main_Lua:AddTheme({
-                    Name = currentThemeName,
-                    Accent = accentColor,
-                    Outline = outlineColor,
-                    Text = textColor,
-                    PlaceholderText = placeholderTextColor,
-                })
-                Loaded_Main_Lua:SetTheme(currentThemeName)
-            end)
-            
-            -- 更新边框
-            local windowFrame = Window:GetWindowFrame()
-            if windowFrame then
-                createDynamicBorder(windowFrame, borderStyle, borderSpeed)
-            end
-            
-            -- 保存设置
-            saveUserThemeSettings()
-            
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "主题已更新",
-                    Content = "当前主题: " .. currentThemeName .. "\n边框样式: " .. borderStyle,
-                    Icon = "palette",
-                    Duration = 3,
-                })
-            end
-        end,
-    })
-    
-    -- 重置为默认主题按钮
-    ThemeTab:Button({
-        Title = "🔄 重置为默认主题",
-        Callback = function()
-            accentColor = "#1e88e5"
-            outlineColor = "#ffffff"
-            textColor = "#ffffff"
-            placeholderTextColor = "#808080"
-            currentThemeName = "🔵 蓝色 (默认)"
-            borderStyle = "⚡ 动态彩虹"
-            borderSpeed = 1.0
-            
-            colorThemeDropdown:Select("🔵 蓝色 (默认)")
-            borderStyleDropdown:Select("⚡ 动态彩虹")
-            
-            if accentPicker and accentPicker.SetValue then
-                accentPicker:SetValue(Color3.fromHex("#1e88e5"))
-            end
-            if outlinePicker and outlinePicker.SetValue then
-                outlinePicker:SetValue(Color3.fromHex("#ffffff"))
-            end
-            if textPicker and textPicker.SetValue then
-                textPicker:SetValue(Color3.fromHex("#ffffff"))
-            end
-            if placeholderPicker and placeholderPicker.SetValue then
-                placeholderPicker:SetValue(Color3.fromHex("#808080"))
-            end
-            
-            -- 应用主题
-            pcall(function()
-                Loaded_Main_Lua:AddTheme({
-                    Name = currentThemeName,
-                    Accent = accentColor,
-                    Outline = outlineColor,
-                    Text = textColor,
-                    PlaceholderText = placeholderTextColor,
-                })
-                Loaded_Main_Lua:SetTheme(currentThemeName)
-            end)
-            
-            -- 更新边框
-            local windowFrame = Window:GetWindowFrame()
-            if windowFrame then
-                createDynamicBorder(windowFrame, borderStyle, borderSpeed)
-            end
-            
-            -- 保存设置
-            saveUserThemeSettings()
-            
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "已重置为默认主题",
-                    Content = "主题已恢复默认设置",
-                    Duration = 3,
-                    Icon = "check-circle",
-                    Color = Color3.fromRGB(34, 197, 94)
-                })
-            end
-        end,
-    })
-    
-    -- 当前主题信息显示
-    ThemeTab:Section({
-        Title = "ℹ️ 当前主题信息",
-    })
-    
-    ThemeTab:Label({
-        Title = "当前主题: " .. currentThemeName,
-    })
-    
-    ThemeTab:Label({
-        Title = "边框样式: " .. borderStyle,
-    })
-    
-    ThemeTab:Label({
-        Title = "边框速度: " .. borderSpeed .. "x",
-    })
-    
-    return Window
-end
-
--- ====== 程序退出时保存当前设置 ======
-game.Players.LocalPlayer.OnTeleport:Connect(function()
-    saveUserThemeSettings()
-end)
-
--- 定期自动保存主题设置（每5分钟）
-spawn(function()
-    while wait(300) do
-        saveUserThemeSettings()
-    end
-end)
-
--- 显示欢迎通知
-if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-    Loaded_Main_Lua:Notify({
-        Title = "Atrumix",
-        Content = "脚本加载成功，正在准备界面...",
-        Duration = 3,
-        Icon = "info"
-    })
-end
-
--- 创建右上角北京时间显示
-createBeijingTimeDisplay()
-
--- 延迟一下再创建主UI
-wait(1)
-
--- 创建主UI
-createAtrumixUI()
-
--- ====== 背景贴画代码 ======
-task.wait(0.1)
-
--- 查找 WindUI 的主容器（通常是 ScreenGui 下的一个带有背景的 Frame）
-local playerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-local windUI = playerGui:FindFirstChild("WindUI") or playerGui:FindFirstChildWhichIsA("ScreenGui")
-
-if windUI then
-    -- 遍历查找实际的背景容器（通常是带有 Background 字样的 Frame）
-    local backgroundFrame = nil
-    
-    -- 查找主窗口的背景容器
-    for _, child in ipairs(windUI:GetDescendants()) do
-        if child:IsA("Frame") and child.Name:find("Background") and child:FindFirstChild("UICorner") then
-            backgroundFrame = child
-            break
         end
     end
+
+    -- ====== 创建右上角时间显示函数 ======
+    local function createBeijingTimeDisplay()
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "BeijingTimeDisplay"
+        screenGui.ResetOnSpawn = false
+        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        screenGui.Parent = game:GetService("CoreGui")
+        
+        local mainFrame = Instance.new("Frame")
+        mainFrame.Name = "TimeFrame"
+        mainFrame.Size = UDim2.new(0, 200, 0, 60)
+        mainFrame.Position = UDim2.new(1, -210, 0, 10)
+        mainFrame.AnchorPoint = Vector2.new(0, 0)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+        mainFrame.BackgroundTransparency = 0.3
+        mainFrame.BorderSizePixel = 0
+        mainFrame.Active = false
+        mainFrame.Selectable = false
+        mainFrame.Draggable = false
+        mainFrame.Parent = screenGui
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = mainFrame
+        
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(100, 100, 150)
+        stroke.Thickness = 2
+        stroke.Parent = mainFrame
+        
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.Name = "TitleLabel"
+        titleLabel.Size = UDim2.new(1, 0, 0, 20)
+        titleLabel.Position = UDim2.new(0, 0, 0, 5)
+        titleLabel.BackgroundTransparency = 1
+        titleLabel.Text = "北京时间"
+        titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        titleLabel.TextSize = 14
+        titleLabel.Font = Enum.Font.GothamSemibold
+        titleLabel.Parent = mainFrame
+        
+        local timeLabel = Instance.new("TextLabel")
+        timeLabel.Name = "TimeLabel"
+        timeLabel.Size = UDim2.new(1, 0, 0, 30)
+        timeLabel.Position = UDim2.new(0, 0, 0, 25)
+        timeLabel.BackgroundTransparency = 1
+        timeLabel.Text = "00:00:00"
+        timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        timeLabel.TextSize = 20
+        timeLabel.Font = Enum.Font.GothamBold
+        timeLabel.Parent = mainFrame
+        
+        local function updateTime()
+            local utcTime = os.time()
+            local beijingTime = utcTime + 8 * 3600
+            local timeTable = os.date("!*t", beijingTime)
+            local timeString = string.format("%02d:%02d:%02d", timeTable.hour, timeTable.min, timeTable.sec)
+            timeLabel.Text = timeString
+        end
+        
+        local timeConnection = game:GetService("RunService").Heartbeat:Connect(updateTime)
+        updateTime()
+        
+        return screenGui, timeConnection
+    end
+
+    -- ====== 创建主UI的函数 ======
+    local Window
+
+    function createMainUI()
+        -- 尝试设置保存的主题
+        pcall(function()
+            WindUI:AddTheme({
+                Name = currentThemeName,
+                Accent = accentColor,
+                Outline = outlineColor,
+                Text = textColor,
+                PlaceholderText = placeholderTextColor,
+            })
+            WindUI:SetTheme(currentThemeName)
+        end)
+        
+        Window = WindUI:CreateWindow({
+            Title = "炸学校脚本｜鱼",
+            Folder = "我要炸学校",
+            Size = UDim2.fromOffset(700, 700),
+        })
+        
+        -- 获取窗口Frame并添加边框
+        local windowFrame = Window:GetWindowFrame()
+        if windowFrame then
+            local stroke = windowFrame:FindFirstChildOfClass("UIStroke")
+            if not stroke then
+                stroke = Instance.new("UIStroke")
+                stroke.Thickness = 3
+                stroke.Parent = windowFrame
+            end
+            createDynamicBorder(windowFrame, borderStyle, borderSpeed)
+        end
+        
+        Window:EditOpenButton({
+            StrokeThickness = 1,
+            Title = "［炸学校脚本］",
+            Color = ColorSequence.new(Color3.fromHex(accentColor), Color3.fromHex("#28004D")),
+            Draggable = true,
+            Icon = "bomb",
+            CornerRadius = UDim.new(1, 0),
+        })
+        
+        -- 显示欢迎通知
+        if WindUI and WindUI.Notify then
+            WindUI:Notify({
+                Title = "欢迎回家",
+                Content = string.format("用户名: %s\n职位: %s", 
+                    currentUsername, 
+                    getUserPosition(currentUsername)
+                ),
+                Duration = 6,
+                Position = "BottomRight",
+                Icon = "user-check",
+                Color = Color3.fromRGB(50, 205, 50),
+            })
+            
+            WindUI:Notify({
+                Title = "炸学校脚本",
+                Content = "感谢您使用炸学校脚本",
+                Duration = 3,
+                Icon = "info"
+            })
+            
+            WindUI:Notify({
+                Title = "炸学校脚本",
+                Content = "本脚本仅限墨龙‖凌霄军团使用",
+                Duration = 3,
+                Icon = "info"
+            })
+            
+            WindUI:Notify({
+                Title = "炸学校脚本",
+                Content = "作者：南烛    脚本由我一人制作，所以更新速度慢",
+                Duration = 4,
+                Icon = "info"
+            })
+        end
+        
+        -- 创建选项卡
+        local InfoTab = Window:Tab({
+            Title = "信息",
+            Icon = "info",
+        })
+        
+        local HomeTab = Window:Tab({
+            Title = "主页",
+            Icon = "house",
+        })
+        
+        local ExclusiveTab = Window:Tab({
+            Title = "专属功能",
+            Icon = "crown",
+        })
+        
+        local UtilityTab = Window:Tab({
+            Title = "通用",
+            Icon = "settings",
+        })
+        
+        local ServerTab = Window:Tab({
+            Title = "选择服务器",
+            Icon = "server",
+        })
+        
+        local OtherScriptsTab = Window:Tab({
+            Title = "其他脚本",
+            Icon = "diamond",
+        })
+        
+        local ThemeTab = Window:Tab({
+            Title = "主题设置",
+            Icon = "palette",
+        })
+        
+        -- ====== 主页选项卡内容 ======
+        HomeTab:Section({
+            Title = "联系与加入",
+        })
+        
+        HomeTab:Button({
+            Title = "复制作者QQ号",
+            Callback = function()
+                copyToClipboard("1901671661")
+            end,
+        })
+        
+        HomeTab:Button({
+            Title = "复制QQ群聊",
+            Callback = function()
+                copyToClipboard("445825485")
+            end,
+        })
+        
+        HomeTab:Button({
+            Title = "加入军团",
+            Callback = function()
+                copyToClipboard("377108392")
+            end,
+        })
+        
+        -- ====== 信息选项卡内容 ======
+        InfoTab:Section({
+            Title = "脚本公告",
+        })
+        
+        InfoTab:Button({
+            Title = "📢 点击查看脚本公告",
+            Callback = function()
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "📢 脚本公告 - 军团联合训练战",
+                        Content = "自今日起，【星夜海】军团与【墨龙 凌霄】军团约定，待手游正式上线后，将联合开启专属【友军训练战】，以战会友、切磋共进。",
+                        Duration = 8,
+                        Position = "Center",
+                        Icon = "megaphone",
+                        Color = Color3.fromRGB(255, 165, 0),
+                    })
+                    wait(2)
+                    WindUI:Notify({
+                        Title = "📋 训练战规则说明",
+                        Content = "本次训练战定于手游上线后的第六周正式开启，赛事全程恪守专属规则与注意事项：\n• 参赛人员限定为远古龙战力持有者\n• 战斗中复活所需费用，由双方军团共同承担\n• 对战全程禁用所有技能，仅可使用普通咬击进行对抗\n• 坚守『友谊第一，比赛第二』的核心原则",
+                        Duration = 12,
+                        Position = "Center",
+                        Icon = "clipboard-list",
+                        Color = Color3.fromRGB(30, 144, 255),
+                    })
+                    wait(3)
+                    WindUI:Notify({
+                        Title = "🏆 赛程安排 & 奖励",
+                        Content = "赛事共分三轮依次开展：\n\n【第一轮】军团普通成员对决\n• 双方各派出一名成员进行1V1单挑\n• 存活方即为该局胜者\n\n【第二轮】各分队队长交锋\n• 待所有普通成员完成对战后进行\n• 双方各分队队长接续进行1V1单挑\n• 规则与首轮一致\n\n【第三轮】军团核心战力对决\n• 双方军团的团长与副团长组队配合\n• 展开团副联合作战的对抗比拼\n• 最终取胜的军团将独揽6666龙币的专属奖励",
+                        Duration = 15,
+                        Position = "Center",
+                        Icon = "trophy",
+                        Color = Color3.fromRGB(255, 215, 0),
+                    })
+                end
+            end,
+        })
+        
+        InfoTab:Section({
+            Title = "快捷功能",
+        })
+        
+        InfoTab:Button({
+            Title = "欢迎回家",
+            Callback = function()
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "欢迎回家",
+                        Content = string.format("用户名: %s\n职位: %s", 
+                            currentUsername, 
+                            getUserPosition(currentUsername)
+                        ),
+                        Duration = 6,
+                        Position = "BottomRight",
+                        Icon = "user-check",
+                        Color = Color3.fromRGB(50, 205, 50),
+                    })
+                end
+            end,
+        })
+        
+        InfoTab:Button({
+            Title = "关于炸学校脚本",
+            Callback = function()
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "关于 炸学校脚本",
+                        Content = "欢迎 " .. currentUsername .. " 使用炸学校脚本\n\n" ..
+                                 "职位: " .. getUserPosition(currentUsername) .. "\n\n" ..
+                                 "作者：南烛\n\n" ..
+                                 "脚本由我一人制作，所以更新速度慢\n\n" ..
+                                 "仅限墨龙‖凌霄军团成员使用\n\n" ..
+                                 "感谢您的使用与支持！",
+                        Duration = 10
+                    })
+                end
+            end,
+        })
+        
+        InfoTab:Button({
+            Title = "显示帮助",
+            Callback = function()
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "使用帮助",
+                        Content = "1. 选择对应游戏后点击按钮加载脚本\n" ..
+                                 "2. 使用【自动检测并执行】可自动检测游戏\n" ..
+                                 "3. 其他脚本为别人制作\n" ..
+                                 "4. 您有权限修改主题颜色和边框样式\n" ..
+                                 "5. 如有问题请联系作者🐧：1901671661",
+                        Duration = 8
+                    })
+                end
+            end,
+        })
+        
+        InfoTab:Button({
+            Title = "显示用户信息",
+            Callback = function()
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "用户信息",
+                        Content = "用户名: " .. currentUsername .. "\n" ..
+                                 "职位: " .. getUserPosition(currentUsername) .. "\n" ..
+                                 "用户ID: " .. game.Players.LocalPlayer.UserId .. "\n" ..
+                                 "账户年龄: " .. game.Players.LocalPlayer.AccountAge .. " 天",
+                        Duration = 8
+                    })
+                end
+            end,
+        })
+        
+        InfoTab:Button({
+            Title = "显示游戏信息",
+            Callback = function()
+                local currentGameId = game.PlaceId
+                local success, gameInfo = pcall(function()
+                    return game:GetService("MarketplaceService"):GetProductInfo(currentGameId)
+                end)
+                
+                local gameName = success and gameInfo.Name or "未知游戏"
+                
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "当前游戏信息",
+                        Content = "游戏名称: " .. gameName .. "\n" ..
+                                 "游戏ID: " .. currentGameId .. "\n" ..
+                                 "服务器ID: " .. game.JobId .. "\n" ..
+                                 "玩家数量: " .. #game.Players:GetPlayers(),
+                        Duration = 8
+                    })
+                end
+            end,
+        })
+        
+        -- ====== 专属功能选项卡内容 ======
+        ExclusiveTab:Section({
+            Title = "👑 管理功能",
+        })
+        
+        -- 获取使用脚本的玩家列表
+        local scriptUsers = detectScriptUsers()
+        
+        local userDropdown = ExclusiveTab:Dropdown({
+            Title = "选择要踢出的玩家",
+            Multi = false,
+            AllowNone = true,
+            Values = scriptUsers,
+            Callback = function(selectedUser)
+                _G.selectedUserToKick = selectedUser
+            end,
+        })
+        
+        ExclusiveTab:Button({
+            Title = "⛔ 立即踢出选中玩家",
+            Callback = function()
+                local targetUser = _G.selectedUserToKick
+                if not targetUser then
+                    if WindUI and WindUI.Notify then
+                        WindUI:Notify({
+                            Title = "操作失败",
+                            Content = "请先选择一个玩家",
+                            Duration = 3,
+                            Icon = "x-circle",
+                            Color = Color3.fromRGB(239, 68, 68)
+                        })
+                    end
+                    return
+                end
+                
+                if targetUser == currentUsername then
+                    if WindUI and WindUI.Notify then
+                        WindUI:Notify({
+                            Title = "操作失败",
+                            Content = "不能踢出自己",
+                            Duration = 3,
+                            Icon = "x-circle",
+                            Color = Color3.fromRGB(239, 68, 68)
+                        })
+                    end
+                    return
+                end
+                
+                local success = kickPlayer(targetUser)
+                if success then
+                    if WindUI and WindUI.Notify then
+                        WindUI:Notify({
+                            Title = "操作成功",
+                            Content = "已踢出玩家: " .. targetUser,
+                            Duration = 3,
+                            Icon = "check-circle",
+                            Color = Color3.fromRGB(34, 197, 94)
+                        })
+                    end
+                    
+                    local newUsers = {}
+                    for _, user in ipairs(scriptUsers) do
+                        if user ~= targetUser then
+                            table.insert(newUsers, user)
+                        end
+                    end
+                    scriptUsers = newUsers
+                    userDropdown:Refresh(scriptUsers)
+                else
+                    if WindUI and WindUI.Notify then
+                        WindUI:Notify({
+                            Title = "操作失败",
+                            Content = "踢出玩家失败",
+                            Duration = 3,
+                            Icon = "x-circle",
+                            Color = Color3.fromRGB(239, 68, 68)
+                        })
+                    end
+                end
+            end,
+        })
+        
+        ExclusiveTab:Button({
+            Title = "🔄 刷新玩家列表",
+            Callback = function()
+                scriptUsers = detectScriptUsers()
+                userDropdown:Refresh(scriptUsers)
+                
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "刷新成功",
+                        Content = "已刷新玩家列表，共 " .. #scriptUsers .. " 人",
+                        Duration = 2,
+                        Icon = "refresh-cw",
+                        Color = Color3.fromRGB(34, 197, 94)
+                    })
+                end
+            end,
+        })
+        
+        -- ====== 通用选项卡内容 ======
+        UtilityTab:Section({
+            Title = "服务器功能",
+        })
+        
+        UtilityTab:Button({
+            Title = "重新进入服务器",
+            Callback = function()
+                local LocalPlayer = game.Players.LocalPlayer
+                game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+            end,
+        })
+        
+        UtilityTab:Section({
+            Title = "脚本功能",
+        })
+        
+        UtilityTab:Button({
+            Title = "飞行v3",
+            Callback = function()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/d320a26c34e6d73048a3e0ba466088bf79f83430/%E9%A3%9E%E8%A1%8C'))()
+            end,
+        })
+        
+        UtilityTab:Section({
+            Title = "系统功能",
+        })
+        
+        UtilityTab:Button({
+            Title = "刷新界面",
+            Callback = function()
+                game:GetService("CoreGui"):ClearAllChildren()
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "界面已刷新",
+                        Content = "正在重新加载界面...",
+                        Duration = 3,
+                        Icon = "refresh-cw"
+                    })
+                end
+                wait(1)
+                createMainUI()
+            end,
+        })
+        
+        -- ====== 选择服务器选项卡内容 ======
+        ServerTab:Section({
+            Title = "自动检测",
+        })
+        
+        ServerTab:Button({
+            Title = "🚀 自动检测并执行",
+            Callback = function()
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "正在检测游戏",
+                        Content = "正在检测当前游戏并执行对应脚本...",
+                        Duration = 3,
+                        Icon = "search",
+                        Color = Color3.fromRGB(59, 130, 246)
+                    })
+                end
+                autoDetectAndExecute()
+            end,
+        })
+        
+        ServerTab:Section({
+            Title = "游戏脚本",
+        })
+        
+        ServerTab:Button({
+            Title = "元素力量大亨",
+            Callback = function()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/042524fac05940b1b1a9389a0bbb9572441b1bc3/%E5%85%83%E7%B4%A0%E5%8A%9B%E9%87%8F%E5%A4%A7%E4%BA%A8'))()
+            end,
+        })
+        
+        ServerTab:Button({
+            Title = "99夜",
+            Callback = function()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/cca264ca9a72738d7d0f51b3e5bd31a764e9d0ec/99%E5%A4%9C'))()
+            end,
+        })
+        
+        ServerTab:Button({
+            Title = "鱼",
+            Callback = function()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/881626be7e7cc72ac677c9cf375f3cb8c794eb55/%E9%B1%BC'))()
+            end,
+        })
+        
+        ServerTab:Button({
+            Title = "刀刃球",
+            Callback = function()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/b71ce91c007fd0cc5e3866c8c13ef8ee13ac17a9/%E5%88%80%E5%88%83%E7%90%83'))()
+            end,
+        })
+        
+        ServerTab:Button({
+            Title = "种植花园",
+            Callback = function()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/045a07f1bbe87ad4d96f2ba8f2ab015db004bf20/%E7%A7%8D%E6%A4%8D%E8%8A%B1%E5%9B%AD'))()
+            end,
+        })
+        
+        ServerTab:Button({
+            Title = "凹凸世界",
+            Callback = function()
+                local success, errorMsg = pcall(function()
+                    local content = game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E5%87%B9%E5%87%B8%E4%B8%96%E7%95%8C.lua')
+                    if content and #content > 0 then
+                        local func = loadstring(content)
+                        if func then
+                            func()
+                        else
+                            error("脚本编译失败")
+                        end
+                    else
+                        error("获取的脚本内容为空")
+                    end
+                end)
+                
+                if success then
+                    if WindUI and WindUI.Notify then
+                        WindUI:Notify({
+                            Title = "凹凸世界",
+                            Content = "脚本加载成功！",
+                            Duration = 3,
+                            Icon = "check",
+                            Color = Color3.fromRGB(34, 197, 94)
+                        })
+                    end
+                else
+                    if WindUI and WindUI.Notify then
+                        WindUI:Notify({
+                            Title = "凹凸世界",
+                            Content = "脚本加载失败，请检查网络或联系作者",
+                            Duration = 3,
+                            Icon = "x-circle",
+                            Color = Color3.fromRGB(239, 68, 68)
+                        })
+                    end
+                end
+            end,
+        })
+        
+        -- ====== 其他脚本选项卡内容 ======
+        OtherScriptsTab:Section({
+            Title = "第三方脚本",
+        })
+        
+        OtherScriptsTab:Button({
+            Title = "皮脚本",
+            Callback = function()
+                getgenv().XiaoPi = "皮脚本QQ群1059336697"
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/xiaopi77/xiaopi77/main/QQ1002100032-Roblox-Pi-script.lua"))()
+            end,
+        })
+        
+        OtherScriptsTab:Button({
+            Title = "TX退休",
+            Callback = function()
+                TX = "脚本群:160369111"
+                Script = "Free永久免费"
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/JsYb666/TX-Free-YYDS/refs/heads/main/FREE-TX-TEAM"))()
+            end,
+        })
+        
+        OtherScriptsTab:Button({
+            Title = "SN脚本",
+            Callback = function()
+                loadstring("\108\111\97\100\115\116\114\105\110\103\40\103\97\109\101\58\72\116\116\112\71\101\116\40\34\104\116\116\112\115\58\47\47\114\97\119\46\103\105\116\104\117\98\117\115\101\114\99\111\110\116\101\110\116\46\99\111\109\47\120\105\97\110\105\110\103\49\53\49\47\83\78\72\85\66\47\109\97\105\110\47\83\78\104\117\98\46\108\117\97\34\41\41\40\41")()
+            end,
+        })
+        
+        OtherScriptsTab:Button({
+            Title = "叶脚本",
+            Callback = function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/roblox-ye/QQ515966991/refs/heads/main/ROBLOX-CNVIP-XIAOYE.lua"))()
+            end,
+        })
+        
+        OtherScriptsTab:Button({
+            Title = "秋蓉",
+            Callback = function()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/nznb520/Atrumix/main/%E6%A6%95%E6%A0%91'))()
+            end,
+        })
+        
+        -- ====== 主题设置选项卡内容 ======
+        ThemeTab:Section({
+            Title = "🎨 预设颜色主题",
+            Description = "从下方选择预设的颜色主题"
+        })
+        
+        -- 预设颜色主题下拉框
+        local colorThemeDropdown = ThemeTab:Dropdown({
+            Title = "选择预设主题",
+            Multi = false,
+            AllowNone = false,
+            Values = colorThemeNames,
+            Callback = function(selectedTheme)
+                applyColorTheme(selectedTheme)
+                
+                if accentPicker and accentPicker.SetValue then
+                    local success, color = pcall(function() return Color3.fromHex(accentColor) end)
+                    if success then
+                        accentPicker:SetValue(color)
+                    end
+                end
+                if outlinePicker and outlinePicker.SetValue then
+                    local success, color = pcall(function() return Color3.fromHex(outlineColor) end)
+                    if success then
+                        outlinePicker:SetValue(color)
+                    end
+                end
+                if textPicker and textPicker.SetValue then
+                    local success, color = pcall(function() return Color3.fromHex(textColor) end)
+                    if success then
+                        textPicker:SetValue(color)
+                    end
+                end
+                if placeholderPicker and placeholderPicker.SetValue then
+                    local success, color = pcall(function() return Color3.fromHex(placeholderTextColor) end)
+                    if success then
+                        placeholderPicker:SetValue(color)
+                    end
+                end
+                
+                if WindUI and WindUI.Notify then
+                    local theme = colorThemes[selectedTheme]
+                    WindUI:Notify({
+                        Title = "已选择主题",
+                        Content = selectedTheme .. "\n" .. theme.Description,
+                        Duration = 3,
+                        Icon = "check-circle",
+                        Color = Color3.fromRGB(34, 197, 94)
+                    })
+                end
+            end,
+        })
+        
+        -- 设置默认选中的主题
+        colorThemeDropdown:Select(currentThemeName)
+        
+        ThemeTab:Section({
+            Title = "🎯 自定义颜色微调",
+            Description = "通过颜色选择器微调各个颜色"
+        })
+        
+        -- 背景颜色选择器（强调色）
+        local accentPicker = ThemeTab:Colorpicker({
+            Title = "背景颜色（强调色）",
+            Default = (function()
+                local success, result = pcall(function() return Color3.fromHex(accentColor) end)
+                return success and result or Color3.fromHex("#1e88e5")
+            end)(),
+            Callback = function(color)
+                accentColor = color:ToHex()
+                if currentThemeName ~= "🎨 自定义" then
+                    currentThemeName = "🎨 自定义"
+                    colorThemeDropdown:Select("🎨 自定义")
+                end
+            end,
+        })
+        
+        -- 边框颜色选择器
+        local outlinePicker = ThemeTab:Colorpicker({
+            Title = "边框颜色",
+            Default = (function()
+                local success, result = pcall(function() return Color3.fromHex(outlineColor) end)
+                return success and result or Color3.fromHex("#ffffff")
+            end)(),
+            Callback = function(color)
+                outlineColor = color:ToHex()
+                if currentThemeName ~= "🎨 自定义" then
+                    currentThemeName = "🎨 自定义"
+                    colorThemeDropdown:Select("🎨 自定义")
+                end
+            end,
+        })
+        
+        -- 文本颜色选择器
+        local textPicker = ThemeTab:Colorpicker({
+            Title = "文本颜色",
+            Default = (function()
+                local success, result = pcall(function() return Color3.fromHex(textColor) end)
+                return success and result or Color3.fromHex("#ffffff")
+            end)(),
+            Callback = function(color)
+                textColor = color:ToHex()
+                if currentThemeName ~= "🎨 自定义" then
+                    currentThemeName = "🎨 自定义"
+                    colorThemeDropdown:Select("🎨 自定义")
+                end
+            end,
+        })
+        
+        -- 输入框占位文本颜色选择器
+        local placeholderPicker = ThemeTab:Colorpicker({
+            Title = "输入框文本颜色",
+            Default = (function()
+                local success, result = pcall(function() return Color3.fromHex(placeholderTextColor) end)
+                return success and result or Color3.fromHex("#808080")
+            end)(),
+            Callback = function(color)
+                placeholderTextColor = color:ToHex()
+                if currentThemeName ~= "🎨 自定义" then
+                    currentThemeName = "🎨 自定义"
+                    colorThemeDropdown:Select("🎨 自定义")
+                end
+            end,
+        })
+        
+        ThemeTab:Section({
+            Title = "边框配置♞",
+            Description = "选择边框样式和速度"
+        })
+        
+        -- 边框样式下拉框
+        local borderStyleDropdown = ThemeTab:Dropdown({
+            Title = "选择边框样式",
+            Multi = false,
+            AllowNone = false,
+            Values = borderStyleNames,
+            Callback = function(selectedStyle)
+                borderStyle = selectedStyle
+                
+                local styleData = borderStyles[selectedStyle]
+                if styleData and WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "已选择边框样式",
+                        Content = selectedStyle .. "\n" .. styleData.description,
+                        Duration = 3,
+                        Icon = "sparkles",
+                        Color = Color3.fromRGB(147, 51, 234)
+                    })
+                end
+            end,
+        })
+        
+        -- 设置默认选中的边框样式
+        borderStyleDropdown:Select(borderStyle)
+        
+        -- 边框速度滑块
+        ThemeTab:Slider({
+            Title = "边框变化速度",
+            Min = 0.2,
+            Max = 3.0,
+            Default = borderSpeed,
+            Decimals = 1,
+            Callback = function(value)
+                borderSpeed = value
+            end,
+        })
+        
+        ThemeTab:Section({
+            Title = "💾 主题操作",
+        })
+        
+        -- 应用主题按钮
+        ThemeTab:Button({
+            Title = "✅ 应用主题",
+            Callback = function()
+                pcall(function()
+                    WindUI:AddTheme({
+                        Name = currentThemeName,
+                        Accent = accentColor,
+                        Outline = outlineColor,
+                        Text = textColor,
+                        PlaceholderText = placeholderTextColor,
+                    })
+                    WindUI:SetTheme(currentThemeName)
+                end)
+                
+                local windowFrame = Window:GetWindowFrame()
+                if windowFrame then
+                    createDynamicBorder(windowFrame, borderStyle, borderSpeed)
+                end
+                
+                saveUserThemeSettings()
+                
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "主题已更新",
+                        Content = "当前主题: " .. currentThemeName .. "\n边框样式: " .. borderStyle,
+                        Icon = "palette",
+                        Duration = 3,
+                    })
+                end
+            end,
+        })
+        
+        -- 重置为默认主题按钮
+        ThemeTab:Button({
+            Title = "🔄 重置为默认主题",
+            Callback = function()
+                accentColor = "#1e88e5"
+                outlineColor = "#ffffff"
+                textColor = "#ffffff"
+                placeholderTextColor = "#808080"
+                currentThemeName = "🔵 蓝色 (默认)"
+                borderStyle = "⚡ 动态彩虹"
+                borderSpeed = 1.0
+                
+                colorThemeDropdown:Select("🔵 蓝色 (默认)")
+                borderStyleDropdown:Select("⚡ 动态彩虹")
+                
+                if accentPicker and accentPicker.SetValue then
+                    accentPicker:SetValue(Color3.fromHex("#1e88e5"))
+                end
+                if outlinePicker and outlinePicker.SetValue then
+                    outlinePicker:SetValue(Color3.fromHex("#ffffff"))
+                end
+                if textPicker and textPicker.SetValue then
+                    textPicker:SetValue(Color3.fromHex("#ffffff"))
+                end
+                if placeholderPicker and placeholderPicker.SetValue then
+                    placeholderPicker:SetValue(Color3.fromHex("#808080"))
+                end
+                
+                pcall(function()
+                    WindUI:AddTheme({
+                        Name = currentThemeName,
+                        Accent = accentColor,
+                        Outline = outlineColor,
+                        Text = textColor,
+                        PlaceholderText = placeholderTextColor,
+                    })
+                    WindUI:SetTheme(currentThemeName)
+                end)
+                
+                local windowFrame = Window:GetWindowFrame()
+                if windowFrame then
+                    createDynamicBorder(windowFrame, borderStyle, borderSpeed)
+                end
+                
+                saveUserThemeSettings()
+                
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "已重置为默认主题",
+                        Content = "主题已恢复默认设置",
+                        Duration = 3,
+                        Icon = "check-circle",
+                        Color = Color3.fromRGB(34, 197, 94)
+                    })
+                end
+            end,
+        })
+        
+        -- 当前主题信息显示
+        ThemeTab:Section({
+            Title = "ℹ️ 当前主题信息",
+        })
+        
+        ThemeTab:Label({
+            Title = "当前主题: " .. currentThemeName,
+        })
+        
+        ThemeTab:Label({
+            Title = "边框样式: " .. borderStyle,
+        })
+        
+        ThemeTab:Label({
+            Title = "边框速度: " .. borderSpeed .. "x",
+        })
+        
+        return Window
+    end
+
+    -- ====== 创建右上角北京时间显示 ======
+    createBeijingTimeDisplay()
     
-    -- 如果没找到，查找带有大尺寸的Frame作为背景
-    if not backgroundFrame then
+    -- 延迟一下再创建主UI
+    wait(1)
+    
+    -- 创建主UI
+    createMainUI()
+    
+    -- ====== 背景贴画代码 ======
+    task.wait(0.1)
+    
+    -- 查找 WindUI 的主容器
+    local playerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    local windUI = playerGui:FindFirstChild("WindUI") or playerGui:FindFirstChildWhichIsA("ScreenGui")
+    
+    if windUI then
+        local backgroundFrame = nil
+        
         for _, child in ipairs(windUI:GetDescendants()) do
-            if child:IsA("Frame") and child.Size.X.Offset > 400 and child.Size.Y.Offset > 400 then
+            if child:IsA("Frame") and child.Name:find("Background") and child:FindFirstChild("UICorner") then
                 backgroundFrame = child
                 break
             end
         end
-    end
-    
-    -- 创建背景贴画
-    if backgroundFrame then
-        -- 创建贴画容器
-        local decalContainer = Instance.new("Frame")
-        decalContainer.Name = "BackgroundDecal"
-        decalContainer.Size = UDim2.new(1, 0, 1, 0)
-        decalContainer.Position = UDim2.new(0, 0, 0, 0)
-        decalContainer.BackgroundTransparency = 1
-        decalContainer.ZIndex = 0  -- 放在最底层
-        decalContainer.Parent = backgroundFrame
         
-        -- 创建第一个贴画（左下角）
-        local decal1 = Instance.new("ImageLabel")
-        decal1.Name = "Decal1"
-        decal1.Size = UDim2.new(0, 200, 0, 200)
-        decal1.Position = UDim2.new(0, 20, 1, -220)
-        decal1.BackgroundTransparency = 1
-        decal1.Image = "rbxassetid://15297449063"  -- 龙形剪影贴画
-        decal1.ImageColor3 = Color3.fromRGB(200, 200, 255)
-        decal1.ImageTransparency = 0.85
-        decal1.ZIndex = 0
-        decal1.Parent = decalContainer
-        
-        -- 创建第二个贴画（右上角）
-        local decal2 = Instance.new("ImageLabel")
-        decal2.Name = "Decal2"
-        decal2.Size = UDim2.new(0, 150, 0, 150)
-        decal2.Position = UDim2.new(1, -170, 0, 20)
-        decal2.BackgroundTransparency = 1
-        decal2.Image = "rbxassetid://15297449063"  -- 同样使用龙形剪影
-        decal2.ImageColor3 = Color3.fromRGB(180, 180, 255)
-        decal2.ImageTransparency = 0.9
-        decal2.Rotation = 15  -- 轻微旋转
-        decal2.ZIndex = 0
-        decal2.Parent = decalContainer
-        
-        -- 创建第三个贴画（中间偏右，半透明）
-        local decal3 = Instance.new("ImageLabel")
-        decal3.Name = "Decal3"
-        decal3.Size = UDim2.new(0, 300, 0, 300)
-        decal3.Position = UDim2.new(0.7, -150, 0.5, -150)
-        decal3.BackgroundTransparency = 1
-        decal3.Image = "rbxassetid://15297449063"
-        decal3.ImageColor3 = Color3.fromRGB(220, 220, 255)
-        decal3.ImageTransparency = 0.95
-        decal3.Rotation = 45
-        decal3.ZIndex = 0
-        decal3.Parent = decalContainer
-        
-        -- 添加微光效果
-        local function createGlow(parent, position, size, color)
-            local glow = Instance.new("Frame")
-            glow.Name = "Glow"
-            glow.Size = size
-            glow.Position = position
-            glow.BackgroundColor3 = color
-            glow.BackgroundTransparency = 0.98
-            glow.BorderSizePixel = 0
-            glow.ZIndex = 0
-            
-            local corner = Instance.new("UICorner")
-            corner.CornerRadius = UDim.new(1, 0)
-            corner.Parent = glow
-            
-            glow.Parent = parent
-            return glow
+        if not backgroundFrame then
+            for _, child in ipairs(windUI:GetDescendants()) do
+                if child:IsA("Frame") and child.Size.X.Offset > 400 and child.Size.Y.Offset > 400 then
+                    backgroundFrame = child
+                    break
+                end
+            end
         end
         
-        -- 添加一些微光点
-        createGlow(decalContainer, UDim2.new(0.2, 0, 0.3, 0), UDim2.new(0, 100, 0, 100), Color3.fromRGB(100, 150, 255))
-        createGlow(decalContainer, UDim2.new(0.8, 0, 0.7, 0), UDim2.new(0, 80, 0, 80), Color3.fromRGB(150, 100, 255))
+        if backgroundFrame then
+            local decalContainer = Instance.new("Frame")
+            decalContainer.Name = "BackgroundDecal"
+            decalContainer.Size = UDim2.new(1, 0, 1, 0)
+            decalContainer.Position = UDim2.new(0, 0, 0, 0)
+            decalContainer.BackgroundTransparency = 1
+            decalContainer.ZIndex = 0
+            decalContainer.Parent = backgroundFrame
+            
+            local decal1 = Instance.new("ImageLabel")
+            decal1.Name = "Decal1"
+            decal1.Size = UDim2.new(0, 200, 0, 200)
+            decal1.Position = UDim2.new(0, 20, 1, -220)
+            decal1.BackgroundTransparency = 1
+            decal1.Image = "rbxassetid://15297449063"
+            decal1.ImageColor3 = Color3.fromRGB(200, 200, 255)
+            decal1.ImageTransparency = 0.85
+            decal1.ZIndex = 0
+            decal1.Parent = decalContainer
+            
+            local decal2 = Instance.new("ImageLabel")
+            decal2.Name = "Decal2"
+            decal2.Size = UDim2.new(0, 150, 0, 150)
+            decal2.Position = UDim2.new(1, -170, 0, 20)
+            decal2.BackgroundTransparency = 1
+            decal2.Image = "rbxassetid://15297449063"
+            decal2.ImageColor3 = Color3.fromRGB(180, 180, 255)
+            decal2.ImageTransparency = 0.9
+            decal2.Rotation = 15
+            decal2.ZIndex = 0
+            decal2.Parent = decalContainer
+            
+            local decal3 = Instance.new("ImageLabel")
+            decal3.Name = "Decal3"
+            decal3.Size = UDim2.new(0, 300, 0, 300)
+            decal3.Position = UDim2.new(0.7, -150, 0.5, -150)
+            decal3.BackgroundTransparency = 1
+            decal3.Image = "rbxassetid://15297449063"
+            decal3.ImageColor3 = Color3.fromRGB(220, 220, 255)
+            decal3.ImageTransparency = 0.95
+            decal3.Rotation = 45
+            decal3.ZIndex = 0
+            decal3.Parent = decalContainer
+            
+            local function createGlow(parent, position, size, color)
+                local glow = Instance.new("Frame")
+                glow.Name = "Glow"
+                glow.Size = size
+                glow.Position = position
+                glow.BackgroundColor3 = color
+                glow.BackgroundTransparency = 0.98
+                glow.BorderSizePixel = 0
+                glow.ZIndex = 0
+                
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(1, 0)
+                corner.Parent = glow
+                
+                glow.Parent = parent
+                return glow
+            end
+            
+            createGlow(decalContainer, UDim2.new(0.2, 0, 0.3, 0), UDim2.new(0, 100, 0, 100), Color3.fromRGB(100, 150, 255))
+            createGlow(decalContainer, UDim2.new(0.8, 0, 0.7, 0), UDim2.new(0, 80, 0, 80), Color3.fromRGB(150, 100, 255))
+        end
     end
-end
-
--- ====== 创建右下角装饰性文本 ======
-local function createFooterText()
-    local screenGui = game:GetService("CoreGui"):FindFirstChild("BeijingTimeDisplay")
-    if not screenGui then return end
     
-    local footerFrame = Instance.new("Frame")
-    footerFrame.Name = "FooterFrame"
-    footerFrame.Size = UDim2.new(0, 300, 0, 30)
-    footerFrame.Position = UDim2.new(1, -310, 1, -40)
-    footerFrame.AnchorPoint = Vector2.new(0, 0)
-    footerFrame.BackgroundTransparency = 1
-    footerFrame.Parent = screenGui
-    
-    local footerText = Instance.new("TextLabel")
-    footerText.Name = "FooterText"
-    footerText.Size = UDim2.new(1, 0, 1, 0)
-    footerText.BackgroundTransparency = 1
-    footerText.Text = "⚡ Atrumix | 仅限墨龙‖凌霄军团使用 ⚡"
-    footerText.TextColor3 = Color3.fromRGB(150, 150, 150)
-    footerText.TextSize = 14
-    footerText.Font = Enum.Font.Gotham
-    footerText.TextTransparency = 0.5
-    footerText.TextXAlignment = Enum.TextXAlignment.Right
-    footerText.TextYAlignment = Enum.TextYAlignment.Center
-    footerText.Parent = footerFrame
-end
-
--- 创建页脚文本
-createFooterText()
-
--- ====== 添加UI动画效果 ======
-local function addUIAnimations()
-    -- 为按钮添加悬停动画（通过WindUI的内置功能）
-    if Loaded_Main_Lua and Loaded_Main_Lua.AddAnimation then
-        Loaded_Main_Lua:AddAnimation({
-            Type = "Hover",
-            Scale = 1.05,
-            Duration = 0.2,
-            EasingStyle = "Quad"
-        })
+    -- ====== 创建右下角装饰性文本 ======
+    local function createFooterText()
+        local screenGui = game:GetService("CoreGui"):FindFirstChild("BeijingTimeDisplay")
+        if not screenGui then return end
+        
+        local footerFrame = Instance.new("Frame")
+        footerFrame.Name = "FooterFrame"
+        footerFrame.Size = UDim2.new(0, 300, 0, 30)
+        footerFrame.Position = UDim2.new(1, -310, 1, -40)
+        footerFrame.AnchorPoint = Vector2.new(0, 0)
+        footerFrame.BackgroundTransparency = 1
+        footerFrame.Parent = screenGui
+        
+        local footerText = Instance.new("TextLabel")
+        footerText.Name = "FooterText"
+        footerText.Size = UDim2.new(1, 0, 1, 0)
+        footerText.BackgroundTransparency = 1
+        footerText.Text = "⚡ 炸学校脚本 | 仅限墨龙‖凌霄军团使用 ⚡"
+        footerText.TextColor3 = Color3.fromRGB(150, 150, 150)
+        footerText.TextSize = 14
+        footerText.Font = Enum.Font.Gotham
+        footerText.TextTransparency = 0.5
+        footerText.TextXAlignment = Enum.TextXAlignment.Right
+        footerText.TextYAlignment = Enum.TextYAlignment.Center
+        footerText.Parent = footerFrame
     end
-end
-
--- 添加动画
-addUIAnimations()
-
--- ====== 自动保存主题设置的函数 ======
-local function autoSaveThemeSettings()
-    while true do
-        wait(300) -- 每5分钟保存一次
+    
+    createFooterText()
+    
+    -- ====== 添加UI动画效果 ======
+    local function addUIAnimations()
+        if WindUI and WindUI.AddAnimation then
+            WindUI:AddAnimation({
+                Type = "Hover",
+                Scale = 1.05,
+                Duration = 0.2,
+                EasingStyle = "Quad"
+            })
+        end
+    end
+    
+    addUIAnimations()
+    
+    -- ====== 自动保存主题设置的函数 ======
+    local function autoSaveThemeSettings()
+        while true do
+            wait(300)
+            saveUserThemeSettings()
+        end
+    end
+    
+    coroutine.wrap(autoSaveThemeSettings)()
+    
+    -- ====== 处理脚本卸载 ======
+    local function onScriptUnload()
         saveUserThemeSettings()
-    end
-end
-
--- 启动自动保存协程
-coroutine.wrap(autoSaveThemeSettings)()
-
--- ====== 处理脚本卸载 ======
-local function onScriptUnload()
-    -- 保存当前设置
-    saveUserThemeSettings()
-    
-    -- 断开所有连接
-    if borderConnection then
-        borderConnection:Disconnect()
-        borderConnection = nil
-    end
-    
-    -- 清理时间显示
-    local timeDisplay = game:GetService("CoreGui"):FindFirstChild("BeijingTimeDisplay")
-    if timeDisplay then
-        timeDisplay:Destroy()
-    end
-    
-    -- 清理其他可能残留的UI元素
-    local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
-    if playerGui then
-        local windUI = playerGui:FindFirstChild("WindUI")
-        if windUI then
-            -- 可以选择保留WindUI或销毁，这里选择保留
+        
+        if borderConnection then
+            borderConnection:Disconnect()
+            borderConnection = nil
+        end
+        
+        local timeDisplay = game:GetService("CoreGui"):FindFirstChild("BeijingTimeDisplay")
+        if timeDisplay then
+            timeDisplay:Destroy()
         end
     end
-end
-
--- 当玩家离开游戏或脚本被终止时调用
-game.Players.LocalPlayer.OnTeleport:Connect(function()
-    onScriptUnload()
-end)
-
--- 当脚本被终止时（通过断开连接等方式）
-local scriptConnection
-scriptConnection = game:GetService("RunService").Heartbeat:Connect(function()
-    -- 空连接，用于保持脚本运行
-end)
-
--- 提供一个卸载脚本的函数（可选）
-_G.UnloadAtrumix = function()
-    onScriptUnload()
-    if scriptConnection then
-        scriptConnection:Disconnect()
+    
+    game.Players.LocalPlayer.OnTeleport:Connect(function()
+        onScriptUnload()
+    end)
+    
+    local scriptConnection
+    scriptConnection = game:GetService("RunService").Heartbeat:Connect(function() end)
+    
+    _G.UnloadAtrumix = function()
+        onScriptUnload()
+        if scriptConnection then
+            scriptConnection:Disconnect()
+        end
+        print("炸学校脚本已卸载")
     end
-    print("Atrumix 已卸载")
-end
-
--- ====== 最终启动消息 ======
-print("✅ Atrumix 主脚本加载完成")
-print("👤 当前用户: " .. currentUsername)
-print("📋 用户职位: " .. userPosition)
-print("🎨 当前主题: " .. currentThemeName)
-print("✨ 边框样式: " .. borderStyle)
-
--- 如果当前用户是作者，显示特殊欢迎
-if currentUsername == "nznb666520" then
-    print("⭐ 欢迎作者南烛使用本脚本")
-    if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-        Loaded_Main_Lua:Notify({
-            Title = "⭐ 作者模式已启用",
-            Content = "欢迎南烛使用 Atrumix",
-            Duration = 5,
-            Icon = "crown",
-            Color = Color3.fromRGB(255, 215, 0)
+    
+    -- ====== 最终启动消息 ======
+    print("✅ 炸学校脚本加载完成")
+    print("👤 当前用户: " .. currentUsername)
+    print("📋 用户职位: " .. getUserPosition(currentUsername))
+    print("🎨 当前主题: " .. currentThemeName)
+    print("✨ 边框样式: " .. borderStyle)
+    
+    if currentUsername == "nznb666520" then
+        print("⭐ 欢迎作者南烛使用本脚本")
+        if WindUI and WindUI.Notify then
+            WindUI:Notify({
+                Title = "⭐ 作者模式已启用",
+                Content = "欢迎南烛使用炸学校脚本",
+                Duration = 5,
+                Icon = "crown",
+                Color = Color3.fromRGB(255, 215, 0)
+            })
+        end
+    end
+    
+    if currentUsername == "lingxiaoge6" then
+        print("⚔️ 欢迎副团长使用本脚本")
+        if WindUI and WindUI.Notify then
+            WindUI:Notify({
+                Title = "⚔️ 管理权限已启用",
+                Content = "欢迎副团长，您可以使用踢出功能",
+                Duration = 5,
+                Icon = "shield",
+                Color = Color3.fromRGB(255, 69, 0)
+            })
+        end
+    end
+    
+    -- ====== 创建调试面板（仅对作者显示）=====
+    if currentUsername == "nznb666520" and Window then
+        task.wait(2)
+        
+        local debugTab = Window:Tab({
+            Title = "调试",
+            Icon = "bug",
+        })
+        
+        debugTab:Section({
+            Title = "系统调试",
+        })
+        
+        debugTab:Button({
+            Title = "📊 显示内存使用",
+            Callback = function()
+                local memStats = collectgarbage("count")
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "内存使用",
+                        Content = string.format("当前内存: %.2f KB\n垃圾回收已开启", memStats),
+                        Duration = 5,
+                        Icon = "cpu"
+                    })
+                end
+            end,
+        })
+        
+        debugTab:Button({
+            Title = "🔄 手动垃圾回收",
+            Callback = function()
+                collectgarbage()
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "垃圾回收",
+                        Content = "已手动执行垃圾回收",
+                        Duration = 3,
+                        Icon = "trash-2"
+                    })
+                end
+            end,
+        })
+        
+        debugTab:Button({
+            Title = "🔍 检测UI元素",
+            Callback = function()
+                local coreGui = game:GetService("CoreGui")
+                local count = 0
+                for _, child in ipairs(coreGui:GetChildren()) do
+                    count = count + 1
+                end
+                
+                local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+                local pCount = 0
+                for _, child in ipairs(playerGui:GetChildren()) do
+                    pCount = pCount + 1
+                end
+                
+                if WindUI and WindUI.Notify then
+                    WindUI:Notify({
+                        Title = "UI元素统计",
+                        Content = string.format("CoreGui: %d 个元素\nPlayerGui: %d 个元素", count, pCount),
+                        Duration = 5,
+                        Icon = "layout"
+                    })
+                end
+            end,
         })
     end
+    
+    print("✨ 炸学校脚本已完全就绪 | 版本: 2026.02.28")
 end
 
--- 如果是副团长，显示管理提示
-if currentUsername == "lingxiaoge6" then
-    print("⚔️ 欢迎副团长使用本脚本")
-    if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-        Loaded_Main_Lua:Notify({
-            Title = "⚔️ 管理权限已启用",
-            Content = "欢迎副团长，您可以使用踢出功能",
-            Duration = 5,
-            Icon = "shield",
-            Color = Color3.fromRGB(255, 69, 0)
-        })
-    end
-end
-
--- ====== 创建调试面板（仅对作者显示）=====
-if currentUsername == "nznb666520" and Window then
-    -- 稍等一会让主UI完全加载
-    task.wait(2)
-    
-    -- 获取已创建的窗口
-    local debugTab = Window:Tab({
-        Title = "调试",
-        Icon = "bug",
-    })
-    
-    debugTab:Section({
-        Title = "系统调试",
-    })
-    
-    debugTab:Button({
-        Title = "📊 显示内存使用",
-        Callback = function()
-            local memStats = collectgarbage("count")
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "内存使用",
-                    Content = string.format("当前内存: %.2f KB\n垃圾回收已开启", memStats),
-                    Duration = 5,
-                    Icon = "cpu"
-                })
-            end
-        end,
-    })
-    
-    debugTab:Button({
-        Title = "🔄 手动垃圾回收",
-        Callback = function()
-            collectgarbage()
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "垃圾回收",
-                    Content = "已手动执行垃圾回收",
-                    Duration = 3,
-                    Icon = "trash-2"
-                })
-            end
-        end,
-    })
-    
-    debugTab:Button({
-        Title = "🔍 检测UI元素",
-        Callback = function()
-            local coreGui = game:GetService("CoreGui")
-            local count = 0
-            for _, child in ipairs(coreGui:GetChildren()) do
-                count = count + 1
-            end
-            
-            local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-            local pCount = 0
-            for _, child in ipairs(playerGui:GetChildren()) do
-                pCount = pCount + 1
-            end
-            
-            if Loaded_Main_Lua and Loaded_Main_Lua.Notify then
-                Loaded_Main_Lua:Notify({
-                    Title = "UI元素统计",
-                    Content = string.format("CoreGui: %d 个元素\nPlayerGui: %d 个元素", count, pCount),
-                    Duration = 5,
-                    Icon = "layout"
-                })
-            end
-        end,
-    })
-end
-
--- ====== 脚本结束标记 ======
--- 所有功能已加载完成
-print("✨ Atrumix 已完全就绪 | 版本: 2026.02.28")
+-- ====== 启动卡密验证 ======
+showPasswordUI()
